@@ -77,9 +77,7 @@ pyyaml>=6.0
 
 **File**: `clinical_for_ipcw.csv` (used by Trajectory Prediction for IPCW computation)
 
-**Location Options**:
-1. **Simple** (Recommended): `{clinical_root}/clinical_for_ipcw.csv` - Single file for all cancers
-2. **Legacy**: `{clinical_root}/{CANCER_DIR}/clinical_for_ipcw.csv` - Separate file per cancer
+**Location**: `{clinical_root}/clinical_for_ipcw.csv`
 
 **Required columns**:
 - `case_submitter_id`: Patient identifier
