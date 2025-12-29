@@ -21,7 +21,7 @@ loss_type: "ce"  # Cross-entropy with IPCW weighting
 # Learning rate scheduler
 scheduler_type: "none"  # none | cosine | plateau
 
-# Time cutoffs for survival analysis (days)
+# Time horizons for outcome classification (days)
 cutoffs: [365, 730, 1095]  # 1, 2, 3 years
 
 # IPCW settings

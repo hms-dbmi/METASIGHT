@@ -6,9 +6,9 @@ Official implementation of METASIGHT, a deep learning system for predicting dist
 
 METASIGHT consists of two complementary prediction modules:
 - **Metastasis Status Prediction Module**: Binary classification (presence/absence of distant metastasis)
-- **Future Trajectory Prediction Module**: Time-to-metastasis survival analysis with IPCW
+- **Future Trajectory Prediction Module**: Multi-class classification for patient outcome at specific time horizons (1, 2, 3 years): stable disease vs. locoregional recurrence vs. distant metastasis
 
-Both modules use attention-based Multiple Instance Learning (MIL) to aggregate patch-level features from whole-slide images. Features are extracted using foundation models (CHIEF, UNI, GIGAPATH, or VIRCHOW2).
+Both modules use attention-based Multiple Instance Learning (MIL) to aggregate tile-level foundation model features. Features are pre-extracted from whole-slide images using foundation models (CHIEF, UNI, GIGAPATH, or VIRCHOW2).
 
 ---
 
@@ -69,7 +69,7 @@ pyyaml>=6.0
 #### 1. Histology Features (Pre-extracted)
 
 - **Format**: PyTorch tensor files (`.pt`)
-- **Shape**: `[n_patches, feature_dim]` where `feature_dim` depends on foundation model
+- **Shape**: `[n_tiles, feature_dim]` where `feature_dim` depends on foundation model
 - **Content**: Pre-extracted features from whole-slide images using foundation models
 - **Naming**: `{slide_id}.pt` (e.g., `TCGA-A1-A0SB-01Z-00-DX1.pt`)
 
@@ -161,7 +161,7 @@ For **Trajectory Prediction**:
 │       │   ├── {FOUNDATION_MODEL_1}/      # e.g., TCGA-BRCA-FS or CUSTOM_CANCER-FS
 │       │   │   └── 20X/
 │       │   │       └── features/
-│       │   │           ├── slide_001.pt  # [n_patches, feature_dim]
+│       │   │           ├── slide_001.pt  # [n_tiles, feature_dim]
 │       │   │           ├── slide_002.pt
 │       │   │           └── ...
 │       │   ├── {FOUNDATION_MODEL_2}/
@@ -189,7 +189,7 @@ For **Trajectory Prediction**:
 │
 └── labels/
     ├── metastasis_status_label.csv        # Status labels (binary)
-    └── future_trajectory_label.csv        # Trajectory labels (time-to-event)
+    └── future_trajectory_label.csv        # Trajectory labels (outcome at time horizons)
 ```
 
 **Note**: For TCGA data, use `TCGA-{CANCER}-{SLIDE_TYPE}` format (e.g., `TCGA-BRCA-FS`). For custom datasets, use `{CANCER}-{SLIDE_TYPE}` format (e.g., `MyDataset-FS`). The code automatically handles both formats.
