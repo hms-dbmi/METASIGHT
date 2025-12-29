@@ -408,7 +408,7 @@ output_dir/
 │   └── fold2_predictions.csv
 └── results_summary.json           # Aggregated metrics
 
-# For trajectory prediction (additional per-cutoff directories):
+# For trajectory prediction:
 output_dir/
 ├── cutoff_365days/
 │   ├── checkpoints/
@@ -518,12 +518,7 @@ METASIGHT/
 If you use METASIGHT in your research, please cite:
 
 ```bibtex
-@article{metasight2024,
-  title={METASIGHT: Pan-Cancer Metastasis Prediction from Whole-Slide Images},
-  author={[Authors]},
-  journal={[Journal]},
-  year={2024}
-}
+
 ```
 
 ---
