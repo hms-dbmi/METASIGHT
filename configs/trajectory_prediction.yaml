@@ -27,7 +27,7 @@ cutoffs: [365, 730, 1095]  # 1, 2, 3 years
 # IPCW settings
 use_cross_fit_ipcw: true  # recommended
 
-# Cancer types (specify one or more)
+# Cancer types (specify one or more; supports TCGA or custom cancer types)
 cancer_list:
   - ACC
   - BLCA
@@ -52,6 +52,7 @@ cancer_list:
   - TGCT
   - THCA
   - UVM
+  # - CUSTOM_CANCER  # Add your own cancer types
 
 # Evaluation
 min_samples_per_cancer: 30  # Minimum test samples for per-cancer metrics
