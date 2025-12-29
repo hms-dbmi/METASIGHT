@@ -9,7 +9,7 @@ The example structure shows:
 2. Required clinical data files and format
 3. Label file structure for both modules
 
-**Note**: This directory contains only example file structures and formats. Actual data must be obtained from TCGA or your own dataset.
+**Note**: This directory contains only example file structures and formats.
 
 ---
 
@@ -26,10 +26,8 @@ example_data/
 │                   ├── example_slide_002.pt
 │                   └── example_slide_003.pt
 ├── clinical/
-│   └── nationwidechildrens.org_clinical_patient_brca.txt_BRCA/
-│       ├── clinical_information.pkl
-│       ├── clinical_for_ipcw.csv
-│       └── README.txt
+│   ├── clinical_for_ipcw.csv
+│   └── README.txt
 └── labels/
     ├── metastasis_status_label.csv
     ├── future_trajectory_label.csv
@@ -81,66 +79,21 @@ print(features.shape)  # torch.Size([2048, 768])
 
 ## 2. Clinical Data
 
-### clinical_information.pkl
-
-Pickle file containing patient and slide metadata.
-
-**Required Columns:**
-```python
-{
-    'case_submitter_id': 'PATIENT_001',  # Patient ID
-    'folder_id': 'PATIENT_001_SLIDE_01',  # Slide ID
-    'project_id': 'CANCER_TYPE',
-    'gender': 'FEMALE',
-    'race': 'WHITE',
-    'ethnicity': 'NOT HISPANIC OR LATINO',
-    'age_at_diagnosis': 45,
-    'ajcc_pathologic_stage': 'Stage IIA',
-    'ajcc_pathologic_t': 'T2',
-    'ajcc_pathologic_n': 'N0',
-    'ajcc_pathologic_m': 'M0'
-}
-```
-
-**Example Code to Create:**
-```python
-import pandas as pd
-
-clinical_df = pd.DataFrame([
-    {
-    'case_submitter_id': 'PATIENT_001',
-    'folder_id': 'PATIENT_001_SLIDE_01',
-    'project_id': 'CANCER_TYPE',
-        'gender': 'FEMALE',
-        'race': 'WHITE',
-        'ethnicity': 'NOT HISPANIC OR LATINO',
-        'age_at_diagnosis': 45,
-        'ajcc_pathologic_stage': 'Stage IIA',
-        'ajcc_pathologic_t': 'T2',
-        'ajcc_pathologic_n': 'N0',
-        'ajcc_pathologic_m': 'M0'
-    },
-    # ... more patients
-])
-
-clinical_df.to_pickle('clinical_information.pkl')
-```
-
 ### clinical_for_ipcw.csv
 
 CSV file with covariates for IPCW computation (trajectory module).
 
 **Format:**
 ```csv
-case_submitter_id,age_at_diagnosis,gender,race,ethnicity,ajcc_pathologic_stage,ajcc_pathologic_t,ajcc_pathologic_n,ajcc_pathologic_m
-TCGA-A1-A0SB,45,FEMALE,WHITE,NOT HISPANIC OR LATINO,Stage IIA,T2,N0,M0
-TCGA-A1-A0SC,52,FEMALE,BLACK OR AFRICAN AMERICAN,NOT HISPANIC OR LATINO,Stage IIIA,T3,N1,M0
-TCGA-A1-A0SD,38,FEMALE,ASIAN,NOT HISPANIC OR LATINO,Stage IA,T1,N0,M0
+case_submitter_id,project_id,age_at_diagnosis,gender,race,ethnicity,ajcc_pathologic_stage,ajcc_pathologic_t,ajcc_pathologic_n,ajcc_pathologic_m
+PATIENT_001,CANCER_TYPE_1,45,FEMALE,WHITE,NOT HISPANIC OR LATINO,Stage IIA,T2,N0,M0
+PATIENT_002,CANCER_TYPE_1,52,FEMALE,BLACK OR AFRICAN AMERICAN,NOT HISPANIC OR LATINO,Stage IIIA,T3,N1,M0
+PATIENT_003,CANCER_TYPE_2,38,FEMALE,ASIAN,NOT HISPANIC OR LATINO,Stage IA,T1,N0,M0
 ```
 
 **Notes:**
-- Must have same patients as in clinical_information.pkl
-- Used for computing censoring weights (IPCW)
+- Used only for trajectory prediction module (IPCW computation)
+- Includes project_id to identify cancer type
 - Missing values are handled via multiple imputation
 
 ---
@@ -153,18 +106,16 @@ Labels for binary metastasis prediction.
 
 **Format:**
 ```csv
-case_submitter_id,project_id,gender,race,ajcc_pathologic_stage,metastasis_label
-PATIENT_001,PATIENT_001_SLIDE_01,CANCER_TYPE,0
-PATIENT_002,PATIENT_002_SLIDE_01,CANCER_TYPE,1
-PATIENT_003,PATIENT_003_SLIDE_01,CANCER_TYPE,0
-TCGA-A2-A0CM,TCGA-LUAD,MALE,WHITE,Stage IB,0
-TCGA-A2-A0CN,TCGA-LUAD,FEMALE,WHITE,Stage IIIB,1
+case_submitter_id,folder_id,project_id,metastasis_label
+PATIENT_001,PATIENT_001_SLIDE_01,CANCER_TYPE_1,0
+PATIENT_002,PATIENT_002_SLIDE_01,CANCER_TYPE_1,1
+PATIENT_003,PATIENT_003_SLIDE_01,CANCER_TYPE_2,0
 ```
 
 **Column Descriptions:**
-- `case_submitter_id`: Patient identifier (must match clinical data)
+- `case_submitter_id`: Patient identifier
+- `folder_id`: Slide identifier (must match feature file names without .pt extension)
 - `project_id`: Cancer type identifier (e.g., BRCA, LUAD, COAD)
-- Demographics: Must match clinical data for merging
 - `metastasis_label`: 
   - `0` = No distant metastasis
   - `1` = Distant metastasis occurred
@@ -175,17 +126,16 @@ Event data for time-to-event analysis.
 
 **Format:**
 ```csv
-case_submitter_id,project_id,new_tumor_event_type,days
-PATIENT_001,PATIENT_001_SLIDE_01,CANCER_TYPE,No Meta No Recur,1825
-PATIENT_002,PATIENT_002_SLIDE_01,CANCER_TYPE,Distant Metastasis,456
-PATIENT_003,PATIENT_003_SLIDE_01,CANCER_TYPE,Locoregional Recurrence,892
-TCGA-A2-A0CM,TCGA-LUAD,No Meta No Recur,2190
-TCGA-A2-A0CN,TCGA-LUAD,Distant Metastasis,234
+case_submitter_id,folder_id,project_id,new_tumor_event_type,days
+PATIENT_001,PATIENT_001_SLIDE_01,CANCER_TYPE_1,No Meta No Recur,1825
+PATIENT_002,PATIENT_002_SLIDE_01,CANCER_TYPE_1,Distant Metastasis,456
+PATIENT_003,PATIENT_003_SLIDE_01,CANCER_TYPE_2,Locoregional Recurrence,892
 ```
 
 **Column Descriptions:**
 - `case_submitter_id`: Patient identifier
-- `project_id`: TCGA cancer type
+- `folder_id`: Slide identifier (must match feature file names without .pt extension)
+- `project_id`: Cancer type identifier
 - `new_tumor_event_type`: Event category
   - `"No Meta No Recur"`: No event (censored or event-free)
   - `"Locoregional Recurrence"`: Local/regional recurrence
@@ -217,21 +167,20 @@ Before training, validate your data:
 - [ ] Minimum 50 patches per slide
 
 ### Clinical Data
-- [ ] `clinical_information.pkl` loads successfully
+- [ ] `clinical_for_ipcw.csv` loads successfully (for trajectory module)
 - [ ] All required columns present
-- [ ] Patient IDs match between files
-- [ ] Slide IDs (folder_id) match feature filenames
+- [ ] Patient IDs match label files
 
 ### Labels
 - [ ] Label files load as CSV
-- [ ] Patient IDs match clinical data
+- [ ] Patient IDs are valid
+- [ ] folder_id values match feature file names
 - [ ] Labels are valid (0/1 for status, valid events for trajectory)
 - [ ] Sufficient samples per class (min 5 per fold)
 
 ### Integration
-- [ ] Feature files exist for all slides in clinical data
-- [ ] Clinical data exists for all slides with features
-- [ ] No duplicate patient IDs
+- [ ] Feature files exist for all folder_id values in labels
+- [ ] No duplicate patient IDs or folder_id values
 - [ ] Meets minimum sample size requirements
 
 ### Run Validation Script
@@ -266,26 +215,26 @@ torch.save(features, 'slide_id.pt')
 
 ### Step 2: Prepare Clinical Data
 
-Collect patient metadata from TCGA clinical files or your institution's database.
+Collect patient clinical covariates for IPCW (trajectory module only).
 
 ```python
 import pandas as pd
 
-# Combine slide IDs with patient metadata
+# Prepare clinical covariates for IPCW
 clinical_df = pd.read_csv('tcga_clinical.csv')
-slides_df = pd.read_csv('slide_mapping.csv')
-
-merged = pd.merge(clinical_df, slides_df, on='case_submitter_id')
-merged.to_pickle('clinical_information.pkl')
+ipcw_df = clinical_df[['case_submitter_id', 'project_id', 'age_at_diagnosis', 
+                        'gender', 'race', 'ethnicity', 'ajcc_pathologic_stage',
+                        'ajcc_pathologic_t', 'ajcc_pathologic_n', 'ajcc_pathologic_m']]
+ipcw_df.to_csv('clinical_for_ipcw.csv', index=False)
 ```
 
 ### Step 3: Prepare Labels
 
 **For Status Prediction:**
-Extract metastasis status from patient follow-up data.
+Extract metastasis status from patient follow-up data. Include case_submitter_id, folder_id (slide ID), project_id, and metastasis_label.
 
 **For Trajectory Prediction:**
-Extract time-to-event data including event type and time.
+Extract time-to-event data including event type and time. Include case_submitter_id, folder_id (slide ID), project_id, new_tumor_event_type, and days.
 
 ### Step 4: Validate
 
@@ -300,8 +249,7 @@ Typical file sizes for reference:
 | File Type | Example Size | Notes |
 |-----------|-------------|-------|
 | Feature file (.pt) | 6-12 MB | For 2000 patches × 768 dims |
-| clinical_information.pkl | 1-5 MB | For 500-1000 patients |
-| clinical_for_ipcw.csv | 50-200 KB | Sparse clinical matrix |
+| clinical_for_ipcw.csv | 50-200 KB | Clinical covariates for IPCW |
 | metastasis_status_label.csv | 100-500 KB | Pan-cancer labels |
 | future_trajectory_label.csv | 50-200 KB | Event data |
 

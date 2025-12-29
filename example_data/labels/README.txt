@@ -10,7 +10,6 @@ This directory contains outcome labels for model training.
      - case_submitter_id: Patient ID
      - folder_id: Slide ID (links to feature files)
      - project_id: Cancer type
-     - gender, race, ajcc_pathologic_stage: Demographics for merging
      - metastasis_label: 0 (no metastasis), 1 (metastasis)
    
 2. **future_trajectory_label.csv**: Time-to-event data
@@ -27,5 +26,5 @@ This directory contains outcome labels for model training.
 - **folder_id must match feature file names** (without .pt extension)
 - These are EXAMPLE files with synthetic data
 - Real labels must be derived from your actual clinical follow-up data
-- Demographics in label files are used to merge with clinical_information.pkl
+- folder_id links slides to their corresponding feature files
 

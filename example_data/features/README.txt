@@ -63,7 +63,6 @@ torch.save(features, 'PATIENT001-SLIDE01.pt')
 
 ## Important Notes
 
-- Feature files are NOT included in this repository
 - Plsease extract features using desired foundation models
 - Ensure feature dimension matches the foundation model you're using
 - All feature files for a given model must have the same dimension
