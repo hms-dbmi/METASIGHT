@@ -1,5 +1,5 @@
 """
-Inverse Probability of Censoring Weighting (IPCW) for survival analysis.
+Inverse Probability of Censoring Weighting (IPCW) for handling censored data in multi-class outcome prediction.
 
 This module implements cross-fit IPCW to prevent data leakage in cross-validation.
 Weights are computed separately for each CV fold using only training data.

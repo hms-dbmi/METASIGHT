@@ -12,7 +12,7 @@ This directory contains outcome labels for model training.
      - project_id: Cancer type
      - metastasis_label: 0 (no metastasis), 1 (metastasis)
    
-2. **future_trajectory_label.csv**: Time-to-event data
+2. **future_trajectory_label.csv**: Patient outcome labels at specific time horizons
    - Used by: Trajectory Prediction Module
    - Required columns:
      - case_submitter_id: Patient ID
