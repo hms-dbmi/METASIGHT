@@ -37,8 +37,7 @@ ENV/
 .ipynb_checkpoints/
 *.ipynb
 
-# Data and results (too large for git)
-data/
+# Results and large files (too large for git)
 results/
 checkpoints/
 *.pt

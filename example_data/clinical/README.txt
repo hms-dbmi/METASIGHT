@@ -31,18 +31,6 @@ clinical_root/
 └── clinical_for_ipcw.csv              # Single file for all cancers
 ```
 
-### Legacy Structure (Also supported):
-```
-clinical_root/
-├── CANCER_DIR_1/
-│   └── clinical_for_ipcw.csv          # One file per cancer
-├── CANCER_DIR_2/
-│   └── clinical_for_ipcw.csv
-└── ...
-```
-
-If using the simple structure (recommended), include `project_id` column to identify cancer types.
-If using legacy structure, `project_id` column is optional.
 
 ## Usage
 
