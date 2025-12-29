@@ -11,7 +11,7 @@ def load_features(cancer, foundation_model, slide_type, feature_root):
     Load foundation model features for a single cancer type.
     
     Args:
-        cancer: Cancer type (e.g., 'BRCA')
+        cancer: Cancer type (e.g., 'BRCA', 'custom_cancer')
         foundation_model: Foundation model name (e.g., 'CHIEF')
         slide_type: 'FS' | 'PM' | 'MIX'
         feature_root: Root directory for features
@@ -22,13 +22,27 @@ def load_features(cancer, foundation_model, slide_type, feature_root):
     """
     mag = '20X'
     
+    # Try with TCGA prefix first, then without (for custom datasets)
     if slide_type == "MIX":
+        # Try TCGA paths first
         fs_path = f"{feature_root}TCGA-{cancer}-FS/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
         pm_path = f"{feature_root}TCGA-{cancer}-PM/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
         feature_paths = glob.glob(fs_path) + glob.glob(pm_path)
+        
+        # If no TCGA paths found, try without prefix
+        if not feature_paths:
+            fs_path = f"{feature_root}{cancer}-FS/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
+            pm_path = f"{feature_root}{cancer}-PM/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
+            feature_paths = glob.glob(fs_path) + glob.glob(pm_path)
     else:
+        # Try TCGA path first
         path = f"{feature_root}TCGA-{cancer}-{slide_type}/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
         feature_paths = glob.glob(path)
+        
+        # If no TCGA path found, try without prefix
+        if not feature_paths:
+            path = f"{feature_root}{cancer}-{slide_type}/{foundation_model}/{mag}/pt_files(stain_norm)/*.pt"
+            feature_paths = glob.glob(path)
     
     feature_dict = {}
     max_len = 0

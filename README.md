@@ -158,7 +158,7 @@ For **Trajectory Prediction**:
 ├── foundation_model_features/
 │   └── WSI_features/
 │       ├── {CANCER_TYPE}-FS/              # Frozen section slides
-│       │   ├── {FOUNDATION_MODEL_1}/
+│       │   ├── {FOUNDATION_MODEL_1}/      # e.g., TCGA-BRCA-FS or CUSTOM_CANCER-FS
 │       │   │   └── 20X/
 │       │   │       └── features/
 │       │   │           ├── slide_001.pt  # [n_patches, feature_dim]
@@ -186,15 +186,13 @@ For **Trajectory Prediction**:
 │
 ├── clinical_gdc/
 │   └── clinical_for_ipcw.csv              # Clinical covariates for IPCW (all cancers)
-│       # OR use subdirectories (legacy):
-│       # ├── {CANCER_TYPE_DIR}/
-│       # │   └── clinical_for_ipcw.csv
-│       # └── ...
 │
 └── labels/
     ├── metastasis_status_label.csv        # Status labels (binary)
     └── future_trajectory_label.csv        # Trajectory labels (time-to-event)
 ```
+
+**Note**: For TCGA data, use `TCGA-{CANCER}-{SLIDE_TYPE}` format (e.g., `TCGA-BRCA-FS`). For custom datasets, use `{CANCER}-{SLIDE_TYPE}` format (e.g., `MyDataset-FS`). The code automatically handles both formats.
 
 ### Minimum Sample Size Requirements
 
@@ -282,6 +280,8 @@ python scripts/train_status_prediction.py \
   --label_file /path/to/labels/metastasis_status_label.csv \
   --output_dir results/status_multi_chief_fs
 ```
+
+**Note**: The `--cancer_list` parameter accepts any cancer type identifier. For TCGA data, use standard abbreviations (e.g., BRCA, LUAD). For custom datasets, use any identifier matching your feature directory structure (e.g., `CUSTOM_CANCER-FS` or `MyDataset-PM`).
 
 ### 2. Future Trajectory Prediction
 
