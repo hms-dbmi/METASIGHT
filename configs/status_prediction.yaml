@@ -1,0 +1,61 @@
+# METASIGHT: Metastasis Status Prediction Module
+# Configuration file for binary metastasis classification
+
+# Model configuration
+foundation_model: "CHIEF"  # CHIEF | UNI | GIGAPATH | VIRCHOW2
+slide_type: "FS"           # FS | PM | MIX
+
+# Training hyperparameters
+batch_size: 32
+learning_rate: 0.0001
+dropout: 0.3
+num_epochs: 50
+fold_n: 3
+patience: 7
+seed: 42
+grad_clip_max_norm: 1.0
+
+# Loss function
+loss_type: "combined"  # ce | focal | combined
+
+# Learning rate scheduler
+scheduler_type: "cosine"  # none | cosine | plateau
+scheduler_T0: 10
+
+# Cancer types (specify one or more) 
+cancer_list:
+  - ACC
+  - BLCA
+  - BRCA
+  - CESC
+  - CHOL
+  - COAD
+  - ESCA
+  - HNSC
+  - KICH
+  - KIRC
+  - KIRP
+  - LIHC
+  - LUAD
+  - LUSC
+  - MESO
+  - PAAD
+  - PRAD
+  - READ
+  - SKCM
+  - STAD
+  - TGCT
+  - THCA
+  - UVM
+
+# Evaluation
+min_samples_per_cancer: 30  # Minimum test samples for per-cancer metrics
+
+# Data paths (update these to your local paths)
+feature_root: "/path/to/foundation_model_features/WSI_features/"
+clinical_root: "/path/to/clinical_data/"
+label_file: "/path/to/labels/metastasis_status_label.csv"
+
+# Output
+output_dir: "results/status_prediction"
+

@@ -1,0 +1,66 @@
+# METASIGHT: Future Trajectory Prediction Module
+# Multi-class classification at fixed time horizons with IPCW
+
+# Model configuration
+foundation_model: "CHIEF"  # CHIEF | UNI | GIGAPATH | VIRCHOW2
+slide_type: "FS"           # FS | PM | MIX
+
+# Training hyperparameters
+batch_size: 16
+learning_rate: 0.00005
+dropout: 0.2
+num_epochs: 50
+fold_n: 4
+patience: 7
+seed: 42
+grad_clip_max_norm: 1.0
+
+# Loss function
+loss_type: "ce"  # Cross-entropy with IPCW weighting
+
+# Learning rate scheduler
+scheduler_type: "none"  # none | cosine | plateau
+
+# Time cutoffs for survival analysis (days)
+cutoffs: [365, 730, 1095]  # 1, 2, 3 years
+
+# IPCW settings
+use_cross_fit_ipcw: true  # recommended
+
+# Cancer types (specify one or more)
+cancer_list:
+  - ACC
+  - BLCA
+  - BRCA
+  - CESC
+  - CHOL
+  - COAD
+  - ESCA
+  - HNSC
+  - KICH
+  - KIRC
+  - KIRP
+  - LIHC
+  - LUAD
+  - LUSC
+  - MESO
+  - PAAD
+  - PRAD
+  - READ
+  - SKCM
+  - STAD
+  - TGCT
+  - THCA
+  - UVM
+
+# Evaluation
+min_samples_per_cancer: 30  # Minimum test samples for per-cancer metrics
+
+# Data paths (update these to your local paths)
+feature_root: "/path/to/foundation_model_features/WSI_features/"
+clinical_root: "/path/to/clinical_data/"
+label_file: "/path/to/labels/future_trajectory_label.csv"
+
+# Output
+output_dir: "results/trajectory_prediction"
+

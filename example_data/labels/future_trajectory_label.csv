@@ -1,0 +1,4 @@
+case_submitter_id,folder_id,project_id,new_tumor_event_type,days
+PATIENT_001,PATIENT_001_SLIDE_01,CANCER_TYPE,No Meta No Recur,1825
+PATIENT_002,PATIENT_002_SLIDE_01,CANCER_TYPE,Distant Metastasis,456
+PATIENT_003,PATIENT_003_SLIDE_01,CANCER_TYPE,Locoregional Recurrence,892
