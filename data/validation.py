@@ -97,14 +97,20 @@ def validate_feature_directory(cancer: str, foundation_model: str, slide_type: s
     if expected_dim is None:
         raise ValueError(f"Unknown foundation model: {foundation_model}")
     
-    # Build file paths
-    if slide_type == "MIX":
-        fs_path = f"{feature_root}TCGA-{cancer}-FS/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        pm_path = f"{feature_root}TCGA-{cancer}-PM/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        feature_paths = glob.glob(fs_path) + glob.glob(pm_path)
-    else:
-        path = f"{feature_root}TCGA-{cancer}-{slide_type}/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        feature_paths = glob.glob(path)
+    # Build file paths - try both with and without TCGA prefix for compatibility
+    feature_paths = []
+    for prefix in [f'TCGA-{cancer}', cancer]:
+        if slide_type == "MIX":
+            fs_path = f"{feature_root}{prefix}-FS/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            pm_path = f"{feature_root}{prefix}-PM/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            feature_paths.extend(glob.glob(fs_path))
+            feature_paths.extend(glob.glob(pm_path))
+        else:
+            path = f"{feature_root}{prefix}-{slide_type}/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            feature_paths.extend(glob.glob(path))
+    
+    # Remove duplicates
+    feature_paths = list(set(feature_paths))
     
     if not feature_paths:
         raise DataValidationError(

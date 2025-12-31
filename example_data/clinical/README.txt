@@ -25,7 +25,7 @@ Any additional clinical variables can be included (e.g., BMI, biomarkers, treatm
 
 ## Directory Organization
 
-### Simple Structure (Recommended):
+### Structure:
 ```
 clinical_root/
 └── clinical_for_ipcw.csv              # Single file for all cancers

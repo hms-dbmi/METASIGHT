@@ -97,23 +97,44 @@ def load_clinical_data(cancer, clinical_root, label_file):
     """
     # Load labels - they now contain folder_id
     label_df = pd.read_csv(label_file)
-    label_df = label_df[label_df['project_id'] == f'TCGA-{cancer.upper()}']
+    # Accept multiple project_id formats: TCGA-{CANCER}, TEST-{CANCER}, or just {CANCER}
+    cancer_upper = cancer.upper()
+    label_df = label_df[
+        (label_df['project_id'] == f'TCGA-{cancer_upper}') | 
+        (label_df['project_id'] == f'TEST-{cancer_upper}') |
+        (label_df['project_id'] == cancer_upper)
+    ]
     
     # Verify folder_id is present
     if 'folder_id' not in label_df.columns:
         raise KeyError(f"'folder_id' column missing in label file. Labels must include folder_id to link to features.")
     
-    # Add slide type and cancer indicator based on folder_id
-    label_df['slide_type'] = label_df['folder_id'].apply(
-        lambda x: 'PM' if x[20:22] == 'DX' else 'FS'
-    )
-    label_df['cancer_slide'] = label_df['folder_id'].apply(
-        lambda x: 1 if x[13] == '0' else 0
-    )
+    # Add slide type and cancer indicator based on folder_id (if TCGA format)
+    # For non-TCGA data, these columns won't filter anything
+    def safe_get_slide_type(folder_id):
+        try:
+            return 'PM' if len(folder_id) > 21 and folder_id[20:22] == 'DX' else 'FS'
+        except:
+            return 'FS'  # Default for non-TCGA data
+    
+    def safe_get_cancer_slide(folder_id):
+        # Check if TCGA format (starts with "TCGA-")
+        if folder_id.startswith('TCGA-'):
+            try:
+                return 1 if len(folder_id) > 13 and folder_id[13] == '0' else 0
+            except:
+                return 0
+        else:
+            return 1  # Non-TCGA data - treat all as cancer slides
+    
+    label_df['slide_type'] = label_df['folder_id'].apply(safe_get_slide_type)
+    label_df['cancer_slide'] = label_df['folder_id'].apply(safe_get_cancer_slide)
     
     # Filter for cancer slides only and valid metastasis labels
     label_df = label_df[label_df['cancer_slide'] == 1]
-    label_df = label_df[label_df['metastasis_label'].isin([0, 1])]
+    # Support both column names: metastasis_status (new) and metastasis_label (legacy)
+    label_col = 'metastasis_status' if 'metastasis_status' in label_df.columns else 'metastasis_label'
+    label_df = label_df[label_df[label_col].isin([0, 1])]
     
     return label_df.reset_index(drop=True)
 
@@ -155,13 +176,21 @@ def load_trajectory_clinical_data(cancer, cutoff, clinical_root, event_data_path
     
     clinical_df = pd.read_csv(clinical_path)
     
-    # Filter by cancer type if project_id column exists
+    # Filter by cancer type if project_id column exists (support TCGA, TEST, and plain formats)
     if 'project_id' in clinical_df.columns:
-        clinical_df = clinical_df[clinical_df['project_id'] == f'TCGA-{cancer_upper}'].copy()
+        clinical_df = clinical_df[
+            (clinical_df['project_id'] == f'TCGA-{cancer_upper}') | 
+            (clinical_df['project_id'] == f'TEST-{cancer_upper}') |
+            (clinical_df['project_id'] == cancer_upper)
+        ].copy()
     
     # Load event data
     event_df = pd.read_csv(event_data_path)
-    event_df = event_df[event_df["project_id"] == f"TCGA-{cancer_upper}"]
+    event_df = event_df[
+        (event_df["project_id"] == f"TCGA-{cancer_upper}") | 
+        (event_df["project_id"] == f"TEST-{cancer_upper}") |
+        (event_df["project_id"] == cancer_upper)
+    ]
     event_df["days"] = pd.to_numeric(event_df["days"], errors="coerce")
     event_df = event_df.dropna(subset=["days"])
     
@@ -215,10 +244,14 @@ def load_trajectory_clinical_data(cancer, cutoff, clinical_root, event_data_path
     
     merged_df = merged_df[merged_df["folder_id"].notnull()].copy()
     
-    # Add slide type
-    merged_df["slide_type"] = merged_df["folder_id"].apply(
-        lambda x: "PM" if x[20:22] == "DX" else "FS"
-    )
+    # Add slide type (generic for both TCGA and non-TCGA data)
+    def safe_get_slide_type(folder_id):
+        try:
+            return 'PM' if len(folder_id) > 21 and folder_id[20:22] == 'DX' else 'FS'
+        except:
+            return 'FS'  # Default for non-TCGA data
+    
+    merged_df["slide_type"] = merged_df["folder_id"].apply(safe_get_slide_type)
     
     # Filter by slide type if specified
     if slide_type_filter:

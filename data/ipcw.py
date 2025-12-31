@@ -7,11 +7,34 @@ Weights are computed separately for each CV fold using only training data.
 
 import numpy as np
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GroupKFold
+
+
+def encode_categorical_variables(X: pd.DataFrame) -> pd.DataFrame:
+    """
+    Encode categorical variables for IPCW computation.
+    
+    Args:
+        X: DataFrame with potential categorical variables
+    
+    Returns:
+        DataFrame with categorical variables encoded as numeric
+    """
+    X = X.copy()
+    for col in X.columns:
+        if X[col].dtype == 'object' or X[col].dtype.name == 'category':
+            # Label encode categorical variables
+            X[col] = pd.factorize(X[col])[0].astype(float)
+            # Replace -1 (NaN indicator from factorize) with NaN
+            X[col] = X[col].replace(-1, np.nan)
+    
+    # Convert to numeric
+    X = X.apply(pd.to_numeric, errors='coerce')
+    return X
 
 
 def compute_ipcw(
@@ -46,9 +69,12 @@ def compute_ipcw(
     if censor_col not in clinical_df.columns:
         raise KeyError(f"'{censor_col}' not found in dataframe")
     
-    X_all = clinical_df[covariate_cols]
+    X_all = clinical_df[covariate_cols].copy()
     y = clinical_df[censor_col].astype(int)
     n = len(clinical_df)
+    
+    # Encode categorical variables
+    X_all = encode_categorical_variables(X_all)
     
     # Bayesian MICE for missing data
     imputer = IterativeImputer(
@@ -176,7 +202,9 @@ def cross_fit_ipcw(
         )
         
         # Transform and predict for test set
-        X_test = test_df[covariate_cols]
+        X_test = test_df[covariate_cols].copy()
+        # Encode categorical variables in test set (same as training)
+        X_test = encode_categorical_variables(X_test)
         X_test_imp = imputer.transform(X_test)
         p_cens_test = lr_model.predict_proba(X_test_imp)[:, 1]
         
