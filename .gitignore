@@ -47,6 +47,9 @@ checkpoints/
 *.pkl
 *.pickle
 
+# Test run outputs
+test_run/
+
 # Logs
 *.log
 logs/
@@ -60,4 +63,7 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# Sensitive data (ID mappings)
+example_data/.id_mapping.txt
 

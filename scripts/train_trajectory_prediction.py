@@ -113,16 +113,23 @@ def parse_args():
 
 
 def load_features_for_cancer(cancer, foundation_model, slide_type, feature_root):
-    """Load feature files for a single cancer type."""
+    """Load feature files for a single cancer type (supports both TCGA and non-TCGA formats)."""
     import glob
     
-    if slide_type == "MIX":
-        fs_path = f"{feature_root}TCGA-{cancer}-FS/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        pm_path = f"{feature_root}TCGA-{cancer}-PM/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        feature_paths = glob.glob(fs_path) + glob.glob(pm_path)
-    else:
-        path = f"{feature_root}TCGA-{cancer}-{slide_type}/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
-        feature_paths = glob.glob(path)
+    feature_paths = []
+    # Try both TCGA-prefixed and non-prefixed paths for compatibility
+    for prefix in [f'TCGA-{cancer}', cancer]:
+        if slide_type == "MIX":
+            fs_path = f"{feature_root}{prefix}-FS/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            pm_path = f"{feature_root}{prefix}-PM/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            feature_paths.extend(glob.glob(fs_path))
+            feature_paths.extend(glob.glob(pm_path))
+        else:
+            path = f"{feature_root}{prefix}-{slide_type}/{foundation_model}/20X/pt_files(stain_norm)/*.pt"
+            feature_paths.extend(glob.glob(path))
+    
+    # Remove duplicates
+    feature_paths = list(set(feature_paths))
     
     feature_dict = {}
     for fpath in feature_paths:
@@ -289,9 +296,15 @@ def evaluate_fold(model, test_loader, device):
     
     # Multi-class AUROC (one-vs-rest)
     try:
-        auroc_ovr = roc_auc_score(test_labels, test_preds, multi_class='ovr', average='macro')
-        metrics['auroc_macro'] = auroc_ovr
-    except ValueError:
+        # Check if all classes are present in test set
+        unique_classes = np.unique(test_labels)
+        n_classes = test_preds.shape[1]
+        if len(unique_classes) == n_classes and all(np.sum(test_labels == c) >= 2 for c in unique_classes):
+            auroc_ovr = roc_auc_score(test_labels, test_preds, multi_class='ovr', average='macro')
+            metrics['auroc_macro'] = auroc_ovr
+        else:
+            metrics['auroc_macro'] = None
+    except (ValueError, RuntimeWarning):
         metrics['auroc_macro'] = None
     
     # Per-class AUROC
@@ -320,6 +333,11 @@ def evaluate_fold(model, test_loader, device):
 
 def main():
     args = parse_args()
+    
+    # Suppress warnings
+    import warnings
+    warnings.filterwarnings('ignore', category=UserWarning)
+    warnings.filterwarnings('ignore', category=RuntimeWarning)
     
     # Set random seed
     torch.manual_seed(args.seed)
@@ -493,8 +511,9 @@ def main():
                 model, test_loader, device
             )
             
-            print(f"Fold {fold_idx + 1}: AUROC={metrics['auroc_macro']:.4f if metrics['auroc_macro'] else 'N/A'}, "
-                  f"Brier={metrics['brier']:.4f if metrics['brier'] else 'N/A'}, Time={train_time:.1f}s")
+            auroc_str = f"{metrics['auroc_macro']:.4f}" if metrics['auroc_macro'] is not None else "N/A"
+            brier_str = f"{metrics['brier']:.4f}" if metrics['brier'] is not None else "N/A"
+            print(f"Fold {fold_idx + 1}: AUROC={auroc_str}, Brier={brier_str}, Time={train_time:.1f}s")
             
             fold_results.append(metrics)
             
@@ -549,8 +568,20 @@ def main():
             json.dump(result_summary, f, indent=2)
         
         print(f"\n=== Results for {cutoff}-day horizon ===")
-        print(f"AUROC: {fold_aware_results['auroc_macro_mean']:.4f} ± {fold_aware_results['auroc_macro_std']:.4f}")
-        print(f"Brier: {fold_aware_results['brier_mean']:.4f} ± {fold_aware_results['brier_std']:.4f}")
+        auroc_mean = fold_aware_results['auroc_macro_mean']
+        auroc_std = fold_aware_results['auroc_macro_std']
+        brier_mean = fold_aware_results['brier_mean']
+        brier_std = fold_aware_results['brier_std']
+        
+        if auroc_mean is not None:
+            auroc_str = f"{auroc_mean:.4f} ± {auroc_std:.4f}"
+        else:
+            auroc_str = "N/A (insufficient samples per class)"
+        
+        brier_str = f"{brier_mean:.4f} ± {brier_std:.4f}" if brier_mean is not None else "N/A"
+        
+        print(f"AUROC: {auroc_str}")
+        print(f"Brier: {brier_str}")
     
     print(f"\nAll results saved to: {args.output_dir}")
 

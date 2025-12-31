@@ -199,6 +199,11 @@ def evaluate_fold(model, test_loader, device):
 def main():
     args = parse_args()
     
+    # Suppress warnings
+    import warnings
+    warnings.filterwarnings('ignore', category=UserWarning)
+    warnings.filterwarnings('ignore', category=RuntimeWarning)
+    
     # Set random seed
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -258,14 +263,30 @@ def main():
         outer_train_df = res_df[res_df['fold'] != fold_idx].reset_index(drop=True)
         test_df = res_df[res_df['fold'] == fold_idx].reset_index(drop=True)
         
-        # Inner validation split
-        inner_splitter = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=args.seed)
-        inner_train_idx, val_idx = next(inner_splitter.split(
-            X=outer_train_df, y=outer_train_df['metastasis_label'],
-            groups=outer_train_df['case_submitter_id']
-        ))
-        train_df = outer_train_df.iloc[inner_train_idx].reset_index(drop=True)
-        val_df = outer_train_df.iloc[val_idx].reset_index(drop=True)
+        # Inner validation split (adapt to sample size)
+        # Check if we have enough samples for stratified splitting
+        min_class_count = outer_train_df['metastasis_label'].value_counts().min()
+        n_inner_splits = min(5, len(outer_train_df) // 2, len(outer_train_df) - 1, min_class_count)
+        
+        if n_inner_splits >= 2 and len(outer_train_df) >= 4:
+            try:
+                inner_splitter = StratifiedGroupKFold(n_splits=n_inner_splits, shuffle=True, random_state=args.seed)
+                inner_train_idx, val_idx = next(inner_splitter.split(
+                    X=outer_train_df, y=outer_train_df['metastasis_label'],
+                    groups=outer_train_df['case_submitter_id']
+                ))
+                train_df = outer_train_df.iloc[inner_train_idx].reset_index(drop=True)
+                val_df = outer_train_df.iloc[val_idx].reset_index(drop=True)
+            except ValueError:
+                # Stratification failed - use simple split
+                split_idx = max(1, int(0.8 * len(outer_train_df)))
+                train_df = outer_train_df.iloc[:split_idx].reset_index(drop=True)
+                val_df = outer_train_df.iloc[split_idx:].reset_index(drop=True)
+        else:
+            # Too few samples - use simple split (80/20)
+            split_idx = max(1, int(0.8 * len(outer_train_df)))
+            train_df = outer_train_df.iloc[:split_idx].reset_index(drop=True)
+            val_df = outer_train_df.iloc[split_idx:].reset_index(drop=True)
         
         # Create datasets
         train_dataset = WSIDataset(train_df, feature_dict=feature_dict)
@@ -320,8 +341,9 @@ def main():
             model, test_loader, device
         )
         
-        print(f"Fold {fold_idx + 1}: AUROC={auroc:.4f if auroc else 'N/A'}, "
-              f"AUPRC={auprc:.4f if auprc else 'N/A'}, Time={train_time:.1f}s")
+        auroc_str = f"{auroc:.4f}" if auroc is not None else "N/A"
+        auprc_str = f"{auprc:.4f}" if auprc is not None else "N/A"
+        print(f"Fold {fold_idx + 1}: AUROC={auroc_str}, AUPRC={auprc_str}, Time={train_time:.1f}s")
         
         fold_results.append({'auroc': auroc, 'auprc': auprc})
         
