@@ -517,9 +517,9 @@ METASIGHT/
 
 If you use METASIGHT in your research, please cite:
 
-```Kao TW. et al., Agentic AI-Powered Pathology Evaluation Reveals Conserved Morphologic Signatures of Metastatic Progression across 23 Cancer Types (under review).
+Kao TW. et al., Agentic AI-Powered Pathology Evaluation Reveals Conserved Morphologic Signatures of Metastatic Progression across 23 Cancer Types (under review).
 
-```
+
 
 ---
 
