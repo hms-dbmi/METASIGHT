@@ -4,7 +4,7 @@
 
 |  |  |
 | ---- | ---- |
-| **Description:** | METASIGHT is an agentic artificial intelligence framework developed to predict (i) metastatic status at diagnosis and (ii) future clinical trajectory (stable disease, locoregional recurrence, or distant metastasis) from hematoxylin and eosin (H&E) whole-slide images of primary tumors. The framework integrates pretrained pathology foundation model embeddings, attention-based multiple instance learning (AB-MIL), inverse probability of censoring weighting (IPCW) for trajectory modeling, and LLM-enabled ensemble selection to improve robustness across cancer types and institutions.|
+| **Description:** | METASIGHT is an agentic artificial intelligence framework developed to predict (i) metastatic status at diagnosis and (ii) future clinical trajectory (stable disease, locoregional recurrence, or distant metastasis) from hematoxylin and eosin (H&E) whole-slide images of primary tumors. The framework integrates pretrained pathology foundation model embeddings, attention-based multiple instance learning (AB-MIL), inverse probability of censoring weighting (IPCW) for trajectory modeling, and an agentic evolutionary optimization framework for ensemble selection to improve robustness across cancer types and institutions.|
 | **Model Type:** | Supervised deep learning ensemble model combining pretrained pathology foundation model embeddings with attention-based multiple instance learning and adaptive ensemble integration.|
 | **Developed By:** | Yu Lab, Department of Biomedical Informatics, Harvard Medical School |
 | **Status** | Development complete (research use only)|
@@ -33,7 +33,7 @@
 
 ## Data
 
-**Data Overview:** Model development used whole-slide images and clinical metadata from TCGA (5,847 patients). External validation included 10,405 pathology samples across six independent cohorts (DFCI, NHS, HPFS, HANCOCK, CPTAC, PLCO), spanning 23 cancer types. The full study comprised 13,867 WSIs and 2,895 TMA cores from 10,353 patients. <br>All datasets were retrospectively collected and de-identified.
+**Data Overview:** Model development used whole-slide images and clinical metadata from TCGA (5,847 patients). External validation included 10,405 pathology samples across seven independent cohorts (DFCI, NHS, HPFS, HANCOCK, CPTAC, PLCO, HKU), spanning 23 cancer types. The full study comprised 28,415 WSIs and 2,895 TMA cores from 14,297 patients. <br>All datasets were retrospectively collected and de-identified.
 
 **Sensitive Data:** All patient data were de-identified and accessed under institutional review board approvals and data use agreements. Raw pathology images are not redistributed.
 
@@ -42,7 +42,7 @@
 **Data Split:** 
 | Type | Split | Description |
 | ---- | ---- | ---- |
-| **Training/Validation:** | 10-fold cross-validation (TCGA)| Model development performed using stratified 10-fold cross-validation within TCGA |
+| **Training/Validation:** | 5-fold cross-validation (TCGA)| Model development performed using stratified 5-fold cross-validation within TCGA |
 | **Testing:** | External cohorts |Fully independent multi-institutional cohorts used for external validation |
 
 
@@ -51,13 +51,13 @@
 **Model Type:** Supervised deep learning ensemble using pretrained pathology foundation model embeddings with attention-based multiple instance learning and adaptive ensemble integration.
 
 **Models Used:** 
-- Pretrained pathology foundation models (e.g., CHIEF, UNI, GigaPath, Virchow2)
+- Pretrained pathology foundation models (e.g., CHIEF, GIGAPATH, KEEP, MUSK)
 - Attention-based MIL pooling
 - Fully connected classification heads
-- LLM-enabled agentic ensemble selection
+- Agentic evolutionary optimization framework for ensemble selection
 - IPCW for trajectory modeling under censoring
 
-**Justification:** Pretrained foundation models capture high-dimensional morphologic representations from large-scale pathology data. Attention-based aggregation enables modeling of regional heterogeneity without manual annotation. Agentic ensemble integration mitigates backbone-specific failure modes and improves stability across cancer types and class imbalance. IPCW accounts for variable follow-up and censoring in trajectory prediction.
+**Justification:** Pretrained foundation models capture high-dimensional morphologic representations from large-scale pathology data. Attention-based aggregation enables modeling of regional heterogeneity without manual annotation. The agentic evolutionary optimization framework mitigates backbone-specific failure modes and improves stability across cancer types and class imbalance. IPCW accounts for variable follow-up and censoring in trajectory prediction.
 
 **Feature Engineering:** No manual handcrafted features were used for prediction. Slide-level risk scores were derived from learned embeddings and attention-weighted aggregation. Nuclear morphometric and tissue composition features were used for interpretability analyses but not as primary predictive inputs.
 
@@ -65,9 +65,9 @@
 
 ### Training Methods:
 
-**Training Process:** Models were trained using supervised learning with cross-entropy loss under 10-fold cross-validation within TCGA. Trajectory prediction incorporated IPCW to account for censoring.
+**Training Process:** Models were trained using supervised learning with cross-entropy loss under 5-fold cross-validation within TCGA. Trajectory prediction incorporated IPCW to account for censoring.
 
-**Hyperparameter/Fine Tuning:** All models were trained using the Adam optimizer (learning rate 1×10⁻⁵, batch size 32, 50 epochs) with a cosine annealing learning rate schedule. Weighted cross-entropy loss was applied to account for class imbalance. Hyperparameters were fixed across foundation model backbones. Internal performance was evaluated using outcome-stratified 10-fold cross-validation before independent external validation.
+**Hyperparameter/Fine Tuning:** All models were trained using the Adam optimizer (learning rate 1×10⁻⁵, batch size 32, 50 epochs) with a cosine annealing learning rate schedule. Weighted cross-entropy loss was applied to account for class imbalance. Hyperparameters were fixed across foundation model backbones. Internal performance was evaluated using outcome-stratified 5-fold cross-validation before independent external validation.
 
 ## Evaluation and Performance
 
@@ -82,11 +82,10 @@
 
 
 **Performance breakdown:** 
-- Metastasis status prediction: average AUROC 0.730 (development), median AUROC 0.732 across external cohorts
-- Trajectory prediction: pan-cancer macro-AUROC 0.721–0.759 across 1-, 2-, and 3-year horizons
-Stable calibration across cohorts (Brier score)
-- Significant improvement over baseline pooling models and clinicopathologic-variable models
-- Performance preserved in early-stage–restricted analyses
+- **Metastatic status (M0 vs M1):** METASIGHT ensembles reached AUROC 0.801 (slide-level) and 0.793 (patch-level) in the TCGA development cohort and maintained AUROC ≥0.79 across all external cohorts (peak 0.876, PLCO). Ensembling improved the mean AUROC from 0.736 for the best individual foundation model to 0.830 (ΔAUROC +0.094; paired Wilcoxon P = 2.4×10⁻⁴), matching or exceeding the best individual model in 77 of 79 cohort–cancer comparisons.
+- **Future trajectory (1-, 2-, 3-year):** METASIGHT ensembles reached mean AUROC 0.882, 0.892, and 0.903 at the 1-, 2-, and 3-year horizons, versus 0.825, 0.823, and 0.822 for the best individual foundation models (ΔAUROC +0.057/+0.070/+0.081; paired Wilcoxon P = 0.028), with improvements reproduced in external cohorts (e.g., DFCI, HANCOCK).
+- **Calibration:** Ensembling lowered the mean Brier score from 0.111 to 0.085 (status) and from 0.064/0.091/0.108 to 0.049/0.063/0.070 across the 1-, 2-, and 3-year horizons (trajectory).
+- **Clinical utility:** Decision-curve analysis showed positive net benefit over treat-all and treat-none strategies at all evaluated risk thresholds in internal and external cohorts, and the ensemble yielded consistently positive continuous net reclassification improvement (NRI) relative to individual foundation models.
 
 **Performance in Deployment**: Model evaluation was conducted in retrospective research settings using GPU infrastructure. The model has not been prospectively validated or deployed in live clinical workflows.
 

@@ -8,7 +8,7 @@ METASIGHT consists of two complementary prediction modules:
 - **Metastasis Status Prediction Module**: Binary classification (presence/absence of distant metastasis)
 - **Future Trajectory Prediction Module**: Multi-class classification for patient outcome at specific time horizons (1, 2, 3 years): stable disease vs. locoregional recurrence vs. distant metastasis
 
-Both modules use attention-based Multiple Instance Learning (MIL) to aggregate tile-level foundation model features. Features are pre-extracted from whole-slide images using foundation models (CHIEF, UNI, GIGAPATH, or VIRCHOW2).
+Both modules use attention-based Multiple Instance Learning (MIL) to aggregate tile-level foundation model features. Features are pre-extracted from whole-slide images using foundation models (CHIEF, GIGAPATH, KEEP, or MUSK).
 
 ---
 
@@ -60,9 +60,9 @@ pyyaml>=6.0
 | Foundation Model | Feature Dimension |
 |-----------------|-------------------|
 | CHIEF | 768 |
-| UNI | 1024 |
 | GIGAPATH | 1536 |
-| VIRCHOW2 | 2560 |
+| KEEP | 768 |
+| MUSK | 1024 |
 
 ### Required Data Files
 
@@ -503,9 +503,10 @@ METASIGHT/
 │   ├── train_status_prediction.py
 │   ├── train_trajectory_prediction.py
 │   └── inference.py               # Standalone inference
-├── agentic_ensembling/            # Evolved ensemble programs
-│   ├── metastasis_status_prediction/
-│   └── future_trajectory_prediction/
+├── agentic_evolutionary_optimization_framework_implementation/   # Agentic evolutionary optimization framework for ensemble selection
+│   ├── driver/                    # Two-stage search / select-freeze / transfer drivers
+│   ├── metasight_ensemble/        # Ensemble search components (seeds, evaluator, selection)
+│   └── configs/
 ├── requirements.txt
 ├── LICENSE
 └── README.md
@@ -534,7 +535,7 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 
 This work uses pre-extracted features from the following foundation models:
 - **CHIEF**: Wang, X., Zhao, J., Marostica, E. et al. A pathology foundation model for cancer diagnosis and prognosis prediction. Nature 634, 970–978 (2024). https://doi.org/10.1038/s41586-024-07894-z
-- **UNI**: Chen, R.J., Ding, T., Lu, M.Y. et al. Towards a general-purpose foundation model for computational pathology. Nat Med 30, 850–862 (2024). https://doi.org/10.1038/s41591-024-02857-3
 - **GIGAPATH**: Xu, H., Usuyama, N., Bagga, J. et al. A whole-slide foundation model for digital pathology from real-world data. Nature 630, 181–188 (2024). https://doi.org/10.1038/s41586-024-07441-w
-- **VIRCHOW2**: Vorontsov, E., Bozkurt, A., Casson, A. et al. A foundation model for clinical-grade computational pathology and rare cancers detection. Nat Med 30, 2924–2935 (2024). https://doi.org/10.1038/s41591-024-03141-0
+- **KEEP**: Zhou, X., Sun, L., He, D. et al. Knowledge-enhanced pretraining for vision-language pathology foundation model on cancer diagnosis. Cancer Cell 44, 777–791.e7 (2026). https://doi.org/10.1016/j.ccell.2026.01.019
+- **MUSK**: Xiang, J., Wang, X., Zhang, X. et al. A vision–language foundation model for precision oncology. Nature 638, 769–778 (2025). https://doi.org/10.1038/s41586-024-08378-w
 

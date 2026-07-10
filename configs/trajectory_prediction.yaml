@@ -2,8 +2,8 @@
 # Multi-class classification at fixed time horizons with IPCW
 
 # Model configuration
-foundation_model: "CHIEF"  # CHIEF | UNI | GIGAPATH | VIRCHOW2
-slide_type: "FS"           # FS | PM | MIX
+foundation_model: "CHIEF"  # CHIEF | GIGAPATH | KEEP | MUSK
+slide_type: "MIX"           # FS | PM | MIX
 
 # Training hyperparameters
 batch_size: 16

@@ -16,9 +16,9 @@ from typing import List, Dict, Tuple, Optional
 # Foundation model expected dimensions
 FOUNDATION_MODEL_DIMS = {
     'CHIEF': 768,
-    'UNI': 1024,
     'GIGAPATH': 1536,
-    'VIRCHOW2': 2560
+    'KEEP': 768,
+    'MUSK': 1024
 }
 
 # Minimum sample sizes per cancer for reliable evaluation
@@ -429,11 +429,11 @@ if __name__ == "__main__":
     parser.add_argument("--slide_type", type=str, default="FS")
     parser.add_argument("--task", type=str, default="status", choices=['status', 'trajectory'])
     parser.add_argument("--feature_root", type=str, 
-                       default="/n/data2/hms/dbmi/kyu/lab/NCKU/foundation_model_features/WSI_features/")
+                       default="/path/to/foundation_model_features/WSI_features/")
     parser.add_argument("--clinical_root", type=str,
-                       default="/n/data2/hms/dbmi/kyu/lab/pet200/clinical_gdc")
+                       default="/path/to/clinical_data/")
     parser.add_argument("--label_file", type=str,
-                       default="/n/data2/hms/dbmi/kyu/lab/tik161/Metastasis_STpath/data/labels/TCGA_pancancer_label.csv")
+                       default="/path/to/labels/metastasis_status_label.csv")
     
     args = parser.parse_args()
     

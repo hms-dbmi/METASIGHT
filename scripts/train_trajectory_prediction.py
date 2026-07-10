@@ -36,9 +36,9 @@ from evaluation import compute_fold_aware_metrics
 # Foundation model dimensions
 FOUNDATION_MODELS = {
     'CHIEF': 768,
-    'UNI': 1024,
     'GIGAPATH': 1536,
-    'VIRCHOW2': 2560
+    'KEEP': 768,
+    'MUSK': 1024
 }
 
 # IPCW covariates for censoring model
@@ -54,7 +54,7 @@ def parse_args():
     
     # Model configuration
     parser.add_argument("--foundation_model", type=str, required=True,
-                       choices=['CHIEF', 'UNI', 'GIGAPATH', 'VIRCHOW2'])
+                       choices=['CHIEF', 'GIGAPATH', 'KEEP', 'MUSK'])
     parser.add_argument("--slide_type", type=str, required=True,
                        choices=['FS', 'PM', 'MIX'])
     
@@ -90,11 +90,11 @@ def parse_args():
     
     # Data paths
     parser.add_argument("--feature_root", type=str,
-                       default="/n/data2/hms/dbmi/kyu/lab/NCKU/foundation_model_features/WSI_features/")
+                       default="/path/to/foundation_model_features/WSI_features/")
     parser.add_argument("--clinical_root", type=str,
-                       default="/n/data2/hms/dbmi/kyu/lab/pet200/clinical_gdc")
+                       default="/path/to/clinical_data/")
     parser.add_argument("--label_file", type=str,
-                       default="/n/data2/hms/dbmi/kyu/lab/tik161/Metastasis_STpath/data/labels/future_trajectory_label.csv")
+                       default="/path/to/labels/future_trajectory_label.csv")
     
     # Cancer types (trains on all cancers in list)
     parser.add_argument("--cancer_list", nargs="+", 

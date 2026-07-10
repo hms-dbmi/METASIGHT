@@ -22,9 +22,9 @@ from models import MILNet, TrajectoryMILNet
 # Foundation model dimensions
 FOUNDATION_MODELS = {
     'CHIEF': 768,
-    'UNI': 1024,
     'GIGAPATH': 1536,
-    'VIRCHOW2': 2560
+    'KEEP': 768,
+    'MUSK': 1024
 }
 
 
