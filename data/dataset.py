@@ -10,7 +10,7 @@ class WSIDataset(Dataset):
     Dataset for loading tile-level foundation model features.
     
     Features are pre-extracted from whole-slide images using foundation models
-    (CHIEF, UNI, GIGAPATH, VIRCHOW2) and stored as tensors [n_tiles, feature_dim].
+    (CHIEF, GIGAPATH, KEEP, MUSK) and stored as tensors [n_tiles, feature_dim].
     
     Args:
         df: DataFrame with slide metadata and labels

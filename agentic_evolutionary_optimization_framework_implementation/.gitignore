@@ -1,0 +1,27 @@
+# ---- secrets: NEVER commit ----
+.env
+*.rtf
+*.key
+*_API_KEY*
+*api_key*
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# ---- run artifacts ----
+results/
+openevolve_output/
+**/checkpoints/
+**/checkpoint_*/
+*.log
+
+# ---- real (non-toy) data must never be shipped ----
+data/real/
+
+# ---- macOS ----
+.DS_Store

@@ -1,0 +1,46 @@
+# Stage 2 — targeted refinement via the Claude API (Anthropic). Set the model (or METASIGHT_STAGE2_MODEL) + ANTHROPIC_API_KEY.
+# before running. Seeded from Stage-1 Pareto programs; lower temperature, fewer iterations,
+# more exploitation. The driver overwrites llm.api_base, llm.models[0].name, and
+# prompt.system_message from env before each run.
+max_iterations: 40
+checkpoint_interval: 10
+log_level: "INFO"
+diff_based_evolution: true
+max_code_length: 20000
+early_stopping_patience: 15
+convergence_threshold: 0.0005
+early_stopping_metric: "combined_score"
+
+llm:
+  api_base: "https://api.anthropic.com/v1"
+  models:
+    - name: ""  # Stage 2 uses the Claude API — set your Claude model here or via METASIGHT_STAGE2_MODEL
+      weight: 1.0
+  temperature: 0.35
+  max_tokens: 8000
+  timeout: 300
+  retries: 8
+  retry_delay: 5
+
+prompt:
+  system_message: "INJECTED_BY_DRIVER"
+  num_top_programs: 4
+  num_diverse_programs: 1
+  include_artifacts: true
+
+database:
+  population_size: 40
+  archive_size: 20
+  num_islands: 3
+  elite_selection_ratio: 0.3
+  exploration_ratio: 0.2
+  exploitation_ratio: 0.7
+  migration_interval: 10
+  migration_rate: 0.15
+  log_prompts: false
+
+evaluator:
+  timeout: 600
+  max_retries: 2
+  cascade_evaluation: false
+  parallel_evaluations: 1

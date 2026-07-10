@@ -1,0 +1,11 @@
+# Core — metrics, cohort, evaluator, reflection. No API key or GPU needed.
+numpy>=2.0
+pandas>=2.0
+scikit-learn>=1.3
+pyyaml>=6.0
+
+# LLM search — only needed for the real two-stage path (run_stage1 / run_stage2).
+# The online pipeline (Stage 1 + Stage 2) needs these; the core above does not.
+openevolve>=0.0.20
+openai>=1.0
+anthropic>=0.30

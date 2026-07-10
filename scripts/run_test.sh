@@ -5,8 +5,8 @@
 module load gcc/14.2.0 cuda/12.8 conda/miniforge3/24.11.3-0
 conda activate fairtune
 
-# Navigate to repo
-cd /n/data2/hms/dbmi/kyu/lab/tik161/Metastasis_STpath_github
+# Navigate to repo root (this script lives in scripts/)
+cd "$(dirname "$0")/.."
 
 echo "========================================="
 echo "METASIGHT Pipeline Test - POOLED MULTI-CANCER"

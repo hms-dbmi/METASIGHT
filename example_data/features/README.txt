@@ -18,7 +18,7 @@ features/
 ### Path Components:
 - **CANCER_TYPE**: Cancer type identifier (e.g., BRCA, LUAD, COAD)
 - **SLIDE_TYPE**: Slide type - FS (frozen section) or PM (FFPE/permanent)
-- **FOUNDATION_MODEL**: Model name (e.g., CHIEF, UNI, GIGAPATH, VIRCHOW2)
+- **FOUNDATION_MODEL**: Model name (e.g., CHIEF, GIGAPATH, KEEP, MUSK)
 - **MAGNIFICATION**: Magnification level (e.g., 20X, 40X)
 - **features**: Directory containing .pt feature files
 
@@ -42,9 +42,9 @@ Where:
 - **n_patches**: Number of tissue patches from the whole-slide image (typically 1000-5000)
 - **feature_dim**: Dimension of foundation model features
   - CHIEF: 768
-  - UNI: 1024
   - GIGAPATH: 1536
-  - VIRCHOW2: 2560
+  - KEEP: 768
+  - MUSK: 1024
 
 ## Creating Feature Files
 

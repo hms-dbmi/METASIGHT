@@ -1,0 +1,44 @@
+# Stage 1 — broad exploration (gpt-5.4-mini). The driver overwrites llm.api_base,
+# llm.models[0].name, and prompt.system_message from env before each run.
+max_iterations: 100
+checkpoint_interval: 10
+log_level: "INFO"
+diff_based_evolution: true
+max_code_length: 20000
+early_stopping_patience: 30
+convergence_threshold: 0.0005
+early_stopping_metric: "combined_score"
+
+llm:
+  api_base: "https://api.openai.com/v1"
+  models:
+    - name: "gpt-5.4-mini"
+      weight: 1.0
+  temperature: 0.7
+  max_tokens: 8000
+  timeout: 300
+  retries: 8
+  retry_delay: 5
+
+prompt:
+  system_message: "INJECTED_BY_DRIVER"
+  num_top_programs: 3
+  num_diverse_programs: 2
+  include_artifacts: true
+
+database:
+  population_size: 60
+  archive_size: 30
+  num_islands: 5
+  elite_selection_ratio: 0.2
+  exploration_ratio: 0.3
+  exploitation_ratio: 0.5
+  migration_interval: 10
+  migration_rate: 0.15
+  log_prompts: false
+
+evaluator:
+  timeout: 600
+  max_retries: 2
+  cascade_evaluation: false
+  parallel_evaluations: 1

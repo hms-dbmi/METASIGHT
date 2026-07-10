@@ -61,8 +61,8 @@ Clinical covariates for IPCW (Inverse Probability of Censoring Weighting)
 
 ```bash
 # Quick test (from repository root)
-cd /n/data2/hms/dbmi/kyu/lab/tik161/Metastasis_STpath_github
-bash test_run/run_test.sh
+cd /path/to/Metastasis_STpath_github
+bash scripts/run_test.sh
 
 # Or test individual modules:
 
