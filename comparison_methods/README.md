@@ -156,16 +156,18 @@ Running time with the full budgets on the 36 METASIGHT tasks, 4 cores: the basel
     --reference <folder with METASIGHT's patient-level files, <task>.csv> --out runs/tables
 ```
 
-- A task's score is the mean of the AUROCs computed within each cancer type, on one prediction per patient. A cancer
-  type enters with at least 10 patients and both outcome classes. The Brier score is averaged the same way.
-  Three-class tasks: mean of the one-vs-rest AUROCs (and Brier scores) of the classes present.
+- A task's score is the AUROC pooled over all patients of the task (all cancer types and, for TCGA, all validation
+  folds), on one prediction per patient. The Brier score is pooled the same way. Three-class tasks: mean of the
+  one-vs-rest AUROCs (and Brier scores) of the classes present.
 - A task enters the comparison when its smallest outcome class has at least 5 patients.
 - A method run with several seeds is reported at the seed most favorable to the method (the smallest difference in
   AUROC between the reference and the method). Seeds are never pooled.
-- Within a task: stratified paired bootstrap, 2,000 resamples, patients resampled within cancer type and outcome
-  class; Benjamini-Hochberg across tasks within each method.
-- Across tasks: Wilcoxon signed-rank test on the per-task differences, with the Hodges-Lehmann estimate and its 95%
-  interval; Benjamini-Hochberg across the methods.
+- AUROC: two-sided paired DeLong test, with the 95% confidence interval of the difference. Three-class tasks: the
+  DeLong structural components are averaged over the one-vs-rest classes, so the variance of the macro AUROC
+  difference includes the covariance between classes.
+- Brier score: two-sided paired permutation test, 10,000 permutations (the two predictions of each patient swapped at
+  random).
+- Benjamini-Hochberg across tasks within each method.
 - Differences are the reference minus the method.
 
 The reference files have the layout and row order of the patient-level prediction files (first column the patient
