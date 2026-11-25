@@ -7,16 +7,16 @@ slide_type: "MIX"           # FS | PM | MIX
 
 # Training hyperparameters
 batch_size: 32
-learning_rate: 0.0001
+learning_rate: 0.00001
 dropout: 0.3
 num_epochs: 50
-fold_n: 3
+fold_n: 5
 patience: 7
 seed: 42
 grad_clip_max_norm: 1.0
 
 # Loss function
-loss_type: "combined"  # ce | focal | combined
+loss_type: "ce"  # weighted cross-entropy; ce | focal | combined
 
 # Learning rate scheduler
 scheduler_type: "cosine"  # none | cosine | plateau

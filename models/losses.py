@@ -45,12 +45,39 @@ class TPRLoss(nn.Module):
         return self.beta * tpr_loss
 
 
+class OrdinalDistanceLoss(nn.Module):
+    """
+    Distance-aware ordinal loss for the three ordered trajectory classes
+    (stable < locoregional recurrence < distant metastasis):
+
+        L_i = -log(p_{y_i}) + lam * sum_k |y_i - k| * p_k
+
+    Cross-entropy plus the expected absolute class distance (lam = 1.0).
+    `sample_weights` (e.g. IPCW) multiply the per-sample loss.
+    """
+    
+    def __init__(self, lam=1.0, weight=None):
+        super().__init__()
+        self.lam = lam
+        self.weight = weight
+    
+    def forward(self, inputs, targets, sample_weights=None):
+        ce = nn.functional.cross_entropy(inputs, targets, weight=self.weight, reduction='none')
+        probs = torch.softmax(inputs, dim=1)
+        classes = torch.arange(inputs.size(1), device=inputs.device)
+        distance = (targets.unsqueeze(1) - classes.unsqueeze(0)).abs().to(probs.dtype)
+        loss = ce + self.lam * (distance * probs).sum(dim=1)
+        if sample_weights is not None:
+            loss = loss * sample_weights
+        return loss.mean()
+
+
 def get_loss_function(loss_type, class_weights=None, device='cuda'):
     """
     Factory function for loss functions.
     
     Args:
-        loss_type: 'ce' | 'focal' | 'combined'
+        loss_type: 'ce' | 'focal' | 'combined' | 'ordinal'
         class_weights: Class weights tensor
         device: Device for loss functions
     
@@ -72,6 +99,8 @@ def get_loss_function(loss_type, class_weights=None, device='cuda'):
         def combined_loss(outputs, targets):
             return ce_loss(outputs, targets) + 0.5 * tpr_loss(outputs, targets)
         return combined_loss
+    elif loss_type == "ordinal":
+        return OrdinalDistanceLoss(lam=1.0, weight=class_weights).to(device)
     else:
         raise ValueError(f"Unknown loss_type: {loss_type}")
 

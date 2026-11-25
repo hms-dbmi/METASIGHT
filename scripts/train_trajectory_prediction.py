@@ -27,7 +27,7 @@ from sklearn.utils.class_weight import compute_class_weight
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import TrajectoryMILNet, get_loss_function
+from models import TrajectoryMILNet, OrdinalDistanceLoss, get_loss_function
 from data import (WSIDataset, collate_fn, load_trajectory_clinical_data, cross_fit_ipcw,
                   load_feature_file, get_feature_dim, FEATURE_SUBDIR)
 from training import get_scheduler, step_scheduler
@@ -58,22 +58,22 @@ def parse_args():
                             "slide: whole-slide encoder embedding (CHIEF, GIGAPATH)")
     
     # Training hyperparameters
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--learning_rate", type=float, default=5e-5)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--hidden_dim", type=int, default=128)
     parser.add_argument("--num_epochs", type=int, default=50)
-    parser.add_argument("--fold_n", type=int, default=4)
+    parser.add_argument("--fold_n", type=int, default=5)
     parser.add_argument("--patience", type=int, default=7)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--grad_clip_max_norm", type=float, default=1.0)
     
     # Loss function
-    parser.add_argument("--loss_type", type=str, default="ce",
-                       choices=["ce", "focal", "combined"])
+    parser.add_argument("--loss_type", type=str, default="ordinal",
+                       choices=["ordinal", "ce", "focal", "combined"])
     
     # Scheduler
-    parser.add_argument("--scheduler_type", type=str, default="none",
+    parser.add_argument("--scheduler_type", type=str, default="cosine",
                        choices=["none", "cosine", "plateau"])
     parser.add_argument("--scheduler_T0", type=int, default=10)
     
@@ -204,7 +204,9 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler, loss_f
                 outputs = model(features, mask)
                 
                 # Compute weighted loss
-                if isinstance(loss_fn, nn.CrossEntropyLoss):
+                if isinstance(loss_fn, OrdinalDistanceLoss):
+                    loss = loss_fn(outputs, labels, sample_weights)
+                elif isinstance(loss_fn, nn.CrossEntropyLoss):
                     loss_per_sample = nn.functional.cross_entropy(
                         outputs, labels, reduction='none'
                     )
@@ -241,7 +243,9 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler, loss_f
                 
                 outputs = model(features, mask)
                 
-                if isinstance(loss_fn, nn.CrossEntropyLoss):
+                if isinstance(loss_fn, OrdinalDistanceLoss):
+                    loss = loss_fn(outputs, labels, sample_weights)
+                elif isinstance(loss_fn, nn.CrossEntropyLoss):
                     loss_per_sample = nn.functional.cross_entropy(
                         outputs, labels, reduction='none'
                     )

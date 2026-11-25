@@ -6,20 +6,21 @@ foundation_model: "CHIEF"  # CHIEF | GIGAPATH | KEEP | MUSK
 slide_type: "MIX"           # FS | PM | MIX
 
 # Training hyperparameters
-batch_size: 16
-learning_rate: 0.00005
+batch_size: 32
+learning_rate: 0.00001
 dropout: 0.2
 num_epochs: 50
-fold_n: 4
+fold_n: 5
 patience: 7
 seed: 42
 grad_clip_max_norm: 1.0
 
 # Loss function
-loss_type: "ce"  # Cross-entropy with IPCW weighting
+loss_type: "ordinal"  # distance-aware ordinal loss with IPCW weighting; ordinal | ce | focal | combined
 
 # Learning rate scheduler
-scheduler_type: "none"  # none | cosine | plateau
+scheduler_type: "cosine"  # none | cosine | plateau
+scheduler_T0: 10
 
 # Time horizons for outcome classification (days)
 cutoffs: [365, 730, 1095]  # 1, 2, 3 years

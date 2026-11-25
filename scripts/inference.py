@@ -27,8 +27,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description="METASIGHT Inference")
     
     # Model configuration
-    parser.add_argument("--checkpoint", type=str, required=True,
-                       help="Path to trained model checkpoint (.pt file)")
+    parser.add_argument("--checkpoint", type=str, nargs='+', required=True,
+                       help="Trained model checkpoint(s) (.pt). With several checkpoints (e.g. the "
+                            "five fold models), their predicted probabilities are averaged")
     parser.add_argument("--module", type=str, required=True,
                        choices=['status', 'trajectory'],
                        help="Prediction module: status (binary) or trajectory (multi-class)")
@@ -132,16 +133,16 @@ def load_features(feature_path, feature_dim):
     return features
 
 
-def predict_single(model, features, device, module):
-    """Run inference on a single slide."""
+def predict_single(models, features, device, module):
+    """Run inference on a single slide, averaging the probabilities of all models."""
     features = features.to(device).float()
     
     # Add batch dimension
     features = features.unsqueeze(0)  # [1, n_patches, feature_dim]
     
     with torch.no_grad():
-        logits = model(features, mask=None)
-        probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
+        probs = np.mean([torch.softmax(m(features, mask=None), dim=1).cpu().numpy()[0]
+                         for m in models], axis=0)
     
     # Format results based on module
     if module == 'status':
@@ -165,13 +166,16 @@ def run_inference(args):
     """Main inference pipeline."""
     
     # Load checkpoint and model
-    print(f"Loading checkpoint: {args.checkpoint}")
-    checkpoint, hparams = load_checkpoint(args.checkpoint)
-    model, foundation_model, feature_level, feature_dim = load_model(
-        checkpoint, args.module, args.device, args.feature_level
-    )
+    models = []
+    for checkpoint_path in args.checkpoint:
+        print(f"Loading checkpoint: {checkpoint_path}")
+        checkpoint, hparams = load_checkpoint(checkpoint_path)
+        model, foundation_model, feature_level, feature_dim = load_model(
+            checkpoint, args.module, args.device, args.feature_level
+        )
+        models.append(model)
     print(f"Model loaded: {args.module} module, {foundation_model} {feature_level}-level "
-          f"features ({feature_dim}D)")
+          f"features ({feature_dim}D), {len(models)} checkpoint(s) averaged")
     
     # Collect feature files to process
     feature_files = []
@@ -222,7 +226,7 @@ def run_inference(args):
             features = load_features(fpath, feature_dim)
             
             # Run prediction
-            prediction = predict_single(model, features, args.device, args.module)
+            prediction = predict_single(models, features, args.device, args.module)
             
             # Add metadata
             prediction['slide_id'] = slide_id

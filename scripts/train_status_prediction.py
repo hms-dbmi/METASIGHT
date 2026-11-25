@@ -48,20 +48,20 @@ def parse_args():
     
     # Training hyperparameters
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--dropout", type=float, default=0.3)
     parser.add_argument("--num_epochs", type=int, default=50)
-    parser.add_argument("--fold_n", type=int, default=3)
+    parser.add_argument("--fold_n", type=int, default=5)
     parser.add_argument("--patience", type=int, default=7)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--grad_clip_max_norm", type=float, default=1.0)
     
     # Loss function
-    parser.add_argument("--loss_type", type=str, default="combined",
+    parser.add_argument("--loss_type", type=str, default="ce",
                        choices=["ce", "focal", "combined"])
     
     # Scheduler
-    parser.add_argument("--scheduler_type", type=str, default="none",
+    parser.add_argument("--scheduler_type", type=str, default="cosine",
                        choices=["none", "cosine", "plateau"])
     parser.add_argument("--scheduler_T0", type=int, default=10)
     

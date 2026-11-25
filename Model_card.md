@@ -33,7 +33,7 @@
 
 ## Data
 
-**Data Overview:** Model development used whole-slide images and clinical metadata from TCGA (5,847 patients). External validation included 10,405 pathology samples across seven independent cohorts (DFCI, NHS, HPFS, HANCOCK, CPTAC, PLCO, HKU), spanning 23 cancer types. The full study comprised 28,415 WSIs and 2,895 TMA cores from 14,297 patients. <br>All datasets were retrospectively collected and de-identified.
+**Data Overview:** Model development used 14,665 whole-slide images and clinical metadata from TCGA (6,565 patients). External validation included 10,513 pathology samples across seven independent cohorts (DFCI, NHS, HPFS, HANCOCK, CPTAC, PLCO, HKU). The study spans 24 cancer types: 23 in the TCGA development cohort plus ovarian cancer, evaluated only in external validation. The full study comprised 28,415 WSIs and 2,895 TMA cores from 14,297 patients. <br>All datasets were retrospectively collected and de-identified.
 
 **Sensitive Data:** All patient data were de-identified and accessed under institutional review board approvals and data use agreements. Raw pathology images are not redistributed.
 
@@ -54,7 +54,7 @@
 - Pretrained pathology foundation models (e.g., CHIEF, GIGAPATH, KEEP, MUSK)
 - Attention-based MIL pooling
 - Fully connected classification heads
-- Agentic evolutionary optimization framework for ensemble selection
+- Two-stage agentic evolutionary optimization framework for ensemble selection: LLM-guided program evolution (OpenEvolve with GPT-6-luna) followed by model-guided refinement (Claude Opus 5.5)
 - IPCW for trajectory modeling under censoring
 
 **Justification:** Pretrained foundation models capture high-dimensional morphologic representations from large-scale pathology data. Attention-based aggregation enables modeling of regional heterogeneity without manual annotation. The agentic evolutionary optimization framework mitigates backbone-specific failure modes and improves stability across cancer types and class imbalance. IPCW accounts for variable follow-up and censoring in trajectory prediction.
@@ -65,9 +65,9 @@
 
 ### Training Methods:
 
-**Training Process:** Models were trained using supervised learning with cross-entropy loss under 5-fold cross-validation within TCGA. Trajectory prediction incorporated IPCW to account for censoring.
+**Training Process:** Models were trained using supervised learning under patient-level, outcome-stratified 5-fold cross-validation within TCGA. Metastatic status prediction used weighted cross-entropy loss. Trajectory prediction used a distance-aware ordinal loss (cross-entropy plus an ordinal distance penalty) with fully cross-fitted, stabilized IPCW to account for censoring.
 
-**Hyperparameter/Fine Tuning:** All models were trained using the Adam optimizer (learning rate 1×10⁻⁵, batch size 32, 50 epochs) with a cosine annealing learning rate schedule. Weighted cross-entropy loss was applied to account for class imbalance. Hyperparameters were fixed across foundation model backbones. Internal performance was evaluated using outcome-stratified 5-fold cross-validation before independent external validation.
+**Hyperparameter/Fine Tuning:** All models were trained using the Adam optimizer (learning rate 1×10⁻⁵, batch size 32, 50 epochs) with a cosine annealing learning rate schedule. Hyperparameters were fixed across foundation model backbones. Internal performance was evaluated using outcome-stratified 5-fold cross-validation before independent external validation.
 
 ## Evaluation and Performance
 
@@ -77,15 +77,11 @@
 **Evaluation Process:** 
 
 **Evaluation Focus:** 
-- Primary metric: AUROC (macro-AUROC for trajectory tasks), as AUROC provides threshold-independent discrimination assessment and is robust under class imbalance. 
+- Primary metric: AUROC (macro-AUROC for trajectory tasks), as AUROC provides threshold-independent discrimination assessment and is robust under class imbalance. Metrics are computed at the patient level (slide predictions averaged per patient) with 95% confidence intervals from patient-level bootstrap resampling.
 - Calibration metric: Brier score
 
 
-**Performance breakdown:** 
-- **Metastatic status (M0 vs M1):** METASIGHT ensembles reached AUROC 0.801 (slide-level) and 0.793 (patch-level) in the TCGA development cohort and maintained AUROC ≥0.79 across all external cohorts (peak 0.876, PLCO). Ensembling improved the mean AUROC from 0.736 for the best individual foundation model to 0.830 (ΔAUROC +0.094; paired Wilcoxon P = 2.4×10⁻⁴), matching or exceeding the best individual model in 77 of 79 cohort–cancer comparisons.
-- **Future trajectory (1-, 2-, 3-year):** METASIGHT ensembles reached mean AUROC 0.882, 0.892, and 0.903 at the 1-, 2-, and 3-year horizons, versus 0.825, 0.823, and 0.822 for the best individual foundation models (ΔAUROC +0.057/+0.070/+0.081; paired Wilcoxon P = 0.028), with improvements reproduced in external cohorts (e.g., DFCI, HANCOCK, HKU).
-- **Calibration:** Ensembling lowered the mean Brier score from 0.111 to 0.085 (status) and from 0.064/0.091/0.108 to 0.049/0.063/0.070 across the 1-, 2-, and 3-year horizons (trajectory).
-- **Clinical utility:** Decision-curve analysis showed positive net benefit over treat-all and treat-none strategies at all evaluated risk thresholds in internal and external cohorts, and the ensemble yielded consistently positive continuous net reclassification improvement (NRI) relative to individual foundation models.
+**Performance breakdown:** Discrimination (AUROC), calibration (Brier score) and clinical-utility results for every task, cohort and comparison method are reported in the manuscript (Results and Table S3), which is the reference for all performance numbers.
 
 **Performance in Deployment**: Model evaluation was conducted in retrospective research settings using GPU infrastructure. The model has not been prospectively validated or deployed in live clinical workflows.
 
@@ -101,4 +97,5 @@
 - Majority European-ancestry representation
 - Trajectory modeling limited to 3-year horizon
 - Treatment heterogeneity not fully modeled
+- Death before documented progression is treated as censoring; death is not modeled as a competing event
 - Not approved for clinical use

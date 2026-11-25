@@ -8,7 +8,9 @@ METASIGHT consists of two complementary prediction modules:
 - **Metastasis Status Prediction Module**: Binary classification (presence/absence of distant metastasis)
 - **Future Trajectory Prediction Module**: Multi-class classification for patient outcome at specific time horizons (1, 2, 3 years): stable disease vs. locoregional recurrence vs. distant metastasis
 
-Both modules use attention-based Multiple Instance Learning (MIL) to aggregate tile-level foundation model features. Features are pre-extracted from whole-slide images using foundation models (CHIEF, GIGAPATH, KEEP, or MUSK).
+Both modules use attention-based Multiple Instance Learning (MIL) to aggregate tile-level foundation model features. Features are pre-extracted from whole-slide images using foundation models (CHIEF, GIGAPATH, KEEP, or MUSK); slide-level embeddings (CHIEF, GIGAPATH) are supported with `--feature_level slide`.
+
+Predictions from the individual foundation models are then combined by a two-stage agentic ensemble search (see [`agentic_evolutionary_optimization_framework_implementation/`](agentic_evolutionary_optimization_framework_implementation/README.md)). The ensemble methods it is compared with (supervised stacking, random search and evolutionary search) are in [`comparison_methods/`](comparison_methods/README.md).
 
 ---
 
@@ -24,11 +26,14 @@ Both modules use attention-based Multiple Instance Learning (MIL) to aggregate t
 
 ```bash
 # Clone repository
-git clone <repository_url>
-cd Metastasis_STpath_github
+git clone https://github.com/hms-dbmi/METASIGHT.git
+cd METASIGHT
 
 # Install requirements
 pip install -r requirements.txt
+
+# Or recreate the exact environment used for the manuscript
+conda env create -f environment.yml
 ```
 
 ### Required Python Packages
@@ -57,19 +62,19 @@ pyyaml>=6.0
 
 ### Foundation Model Feature Dimensions
 
-| Foundation Model | Feature Dimension |
-|-----------------|-------------------|
-| CHIEF | 768 |
-| GIGAPATH | 1536 |
-| KEEP | 768 |
-| MUSK | 1024 |
+| Foundation Model | Patch-level | Slide-level |
+|-----------------|-------------|-------------|
+| CHIEF | 768 | 768 |
+| GIGAPATH | 1536 | 768 |
+| KEEP | 768 | – |
+| MUSK | 1024 | – |
 
 ### Required Data Files
 
 #### 1. Histology Features (Pre-extracted)
 
 - **Format**: PyTorch tensor files (`.pt`)
-- **Shape**: `[n_tiles, feature_dim]` where `feature_dim` depends on foundation model
+- **Shape**: `[n_tiles, feature_dim]` (patch level) or `[1, feature_dim]` (slide level), where `feature_dim` depends on foundation model
 - **Content**: Pre-extracted features from whole-slide images using foundation models
 - **Naming**: `{slide_id}.pt` (e.g., `TCGA-A1-A0SB-01Z-00-DX1.pt`)
 
@@ -160,27 +165,27 @@ For **Trajectory Prediction**:
 │       ├── {CANCER_TYPE}-FS/              # Frozen section slides
 │       │   ├── {FOUNDATION_MODEL_1}/      # e.g., TCGA-BRCA-FS or CUSTOM_CANCER-FS
 │       │   │   └── 20X/
-│       │   │       └── features/
+│       │   │       └── pt_files(stain_norm)/
 │       │   │           ├── slide_001.pt  # [n_tiles, feature_dim]
 │       │   │           ├── slide_002.pt
 │       │   │           └── ...
 │       │   ├── {FOUNDATION_MODEL_2}/
 │       │   │   └── 20X/
-│       │   │       └── features/
+│       │   │       └── pt_files(stain_norm)/
 │       │   │           └── ...
 │       │   └── {FOUNDATION_MODEL_3}/
 │       │       └── 20X/
-│       │           └── features/
+│       │           └── pt_files(stain_norm)/
 │       │               └── ...
 │       ├── {CANCER_TYPE}-PM/              # Permanent section slides  
 │       │   └── {FOUNDATION_MODEL}/
 │       │       └── 20X/
-│       │           └── features/
+│       │           └── pt_files(stain_norm)/
 │       │               └── ...
 │       ├── {ANOTHER_CANCER}-FS/
 │       │   └── {FOUNDATION_MODEL}/
 │       │       └── 20X/
-│       │           └── features/
+│       │           └── pt_files(stain_norm)/
 │       │               └── ...
 │       └── ...
 │
@@ -192,7 +197,7 @@ For **Trajectory Prediction**:
     └── future_trajectory_label.csv        # Trajectory labels (outcome at time horizons)
 ```
 
-**Note**: For TCGA data, use `TCGA-{CANCER}-{SLIDE_TYPE}` format (e.g., `TCGA-BRCA-FS`). For custom datasets, use `{CANCER}-{SLIDE_TYPE}` format (e.g., `MyDataset-FS`). The code automatically handles both formats.
+**Note**: Slide-level embeddings (`--feature_level slide`) are read from `{FOUNDATION_MODEL}_WSI/` instead of `{FOUNDATION_MODEL}/`. For TCGA data, use `TCGA-{CANCER}-{SLIDE_TYPE}` format (e.g., `TCGA-BRCA-FS`). For custom datasets, use `{CANCER}-{SLIDE_TYPE}` format (e.g., `MyDataset-FS`). The code automatically handles both formats.
 
 ### Minimum Sample Size Requirements
 
@@ -251,11 +256,11 @@ python scripts/train_status_prediction.py \
   --foundation_model CHIEF \
   --slide_type FS \
   --batch_size 32 \
-  --learning_rate 1e-4 \
+  --learning_rate 1e-5 \
   --dropout 0.3 \
   --num_epochs 50 \
-  --fold_n 3 \
-  --loss_type combined \
+  --fold_n 5 \
+  --loss_type ce \
   --scheduler_type cosine \
   --cancer_list BRCA \
   --feature_root /path/to/foundation_model_features/WSI_features/ \
@@ -268,11 +273,11 @@ python scripts/train_status_prediction.py \
   --foundation_model CHIEF \
   --slide_type FS \
   --batch_size 32 \
-  --learning_rate 1e-4 \
+  --learning_rate 1e-5 \
   --dropout 0.3 \
   --num_epochs 50 \
-  --fold_n 3 \
-  --loss_type combined \
+  --fold_n 5 \
+  --loss_type ce \
   --scheduler_type cosine \
   --cancer_list BRCA LUAD KIRC COAD STAD \
   --feature_root /path/to/foundation_model_features/WSI_features/ \
@@ -292,13 +297,14 @@ Train multi-class classifier for outcome prediction at time horizons with IPCW. 
 python scripts/train_trajectory_prediction.py \
   --foundation_model CHIEF \
   --slide_type FS \
-  --batch_size 16 \
-  --learning_rate 5e-5 \
+  --batch_size 32 \
+  --learning_rate 1e-5 \
   --dropout 0.2 \
   --hidden_dim 128 \
   --num_epochs 50 \
-  --fold_n 4 \
-  --loss_type ce \
+  --fold_n 5 \
+  --loss_type ordinal \
+  --scheduler_type cosine \
   --cutoffs 365 730 1095 \
   --use_cross_fit_ipcw \
   --use_class_weight \
@@ -313,13 +319,14 @@ python scripts/train_trajectory_prediction.py \
 python scripts/train_trajectory_prediction.py \
   --foundation_model CHIEF \
   --slide_type FS \
-  --batch_size 16 \
-  --learning_rate 5e-5 \
+  --batch_size 32 \
+  --learning_rate 1e-5 \
   --dropout 0.2 \
   --hidden_dim 128 \
   --num_epochs 50 \
-  --fold_n 4 \
-  --loss_type ce \
+  --fold_n 5 \
+  --loss_type ordinal \
+  --scheduler_type cosine \
   --cutoffs 365 730 1095 \
   --use_cross_fit_ipcw \
   --use_class_weight \
@@ -358,29 +365,44 @@ python scripts/inference.py \
   --feature_dir /path/to/features/ \
   --slide_list cohort_slide_ids.csv \
   --output_file predictions/cohort_predictions.csv
+
+# External cohort: average the five fold models and score at the patient level
+python scripts/inference.py \
+  --checkpoint results/status_multi_chief_fs/checkpoints/fold*_best.pt \
+  --module status \
+  --feature_dir /path/to/external_features/ \
+  --label_csv external_labels.csv \
+  --output_file predictions/external_predictions.csv
 ```
+
+`--label_csv` (columns `slide_id`, `patient_id`, `true_label`, optional `cancer_type`) averages slide predictions per patient and reports the metrics with bootstrap 95% CIs.
 
 ---
 
 ## Hyperparameters
 
-### Recommended Settings
+### Settings Used in the Manuscript
+
+These are the script defaults, identical for all foundation models.
 
 | Parameter | Status Prediction | Trajectory Prediction |
 |-----------|-------------------|----------------------|
-| **Batch Size** | 32 | 16 |
-| **Learning Rate** | 1e-4 | 5e-5 |
+| **Optimizer** | Adam | Adam |
+| **Batch Size** | 32 | 32 |
+| **Learning Rate** | 1e-5 | 1e-5 |
+| **Epochs** | 50 | 50 |
 | **Dropout** | 0.3 | 0.2 |
 | **Hidden Dim** | 128 | 128 |
-| **Loss Function** | combined (CE + TPR) | ce (with IPCW) |
-| **Scheduler** | cosine | none |
+| **Loss Function** | ce (weighted cross-entropy) | ordinal (distance-aware ordinal loss, with IPCW) |
+| **Scheduler** | cosine | cosine |
 | **Gradient Clipping** | 1.0 | 1.0 |
 | **Early Stopping Patience** | 7 epochs | 7 epochs |
-| **CV Folds** | 3 (status) | 4 (trajectory) |
+| **CV Folds** | 5, patient-level, outcome-stratified | 5, patient-level, outcome-stratified (`--stratified_cv`) |
 
 ### Loss Functions
 
 - **ce**: Cross-entropy with class weights
+- **ordinal**: Distance-aware ordinal loss for trajectory prediction: cross-entropy plus the expected absolute class distance (λ = 1), weighted by IPCW
 - **focal**: Focal loss (addresses class imbalance)
 - **combined**: CE + TPR loss (improves recall for metastasis class)
 
@@ -400,13 +422,13 @@ After training, results are organized as follows:
 output_dir/
 ├── checkpoints/
 │   ├── fold0_best.pt              # Best model for fold 0
-│   ├── fold1_best.pt
-│   └── fold2_best.pt
+│   └── ...                        # fold1 to fold4
 ├── predictions/
-│   ├── fold0_predictions.csv      # Per-fold predictions
-│   ├── fold1_predictions.csv
-│   └── fold2_predictions.csv
-└── results_summary.json           # Aggregated metrics
+│   ├── fold0_predictions.csv      # Held-out slide-level predictions per fold
+│   └── ...                        # fold1 to fold4
+├── patient_predictions.csv        # Slide predictions averaged per patient
+├── per_cancer_metrics.csv         # Patient-level metrics per cancer type
+└── results_summary.json           # Patient-level metrics with 95% CIs
 
 # For trajectory prediction:
 output_dir/
@@ -448,12 +470,16 @@ Where:
 {
   "cancer": "BRCA",
   "foundation_model": "CHIEF",
+  "feature_level": "patch",
   "slide_type": "FS",
-  "n_folds": 3,
-  "mean_auroc": 0.8234,
-  "std_auroc": 0.0456,
-  "mean_auprc": 0.7891,
-  "std_auprc": 0.0523,
+  "n_folds": 5,
+  "n_patients": 1050,
+  "auroc": 0.8234,
+  "auroc_ci_lo": 0.7810,
+  "auroc_ci_hi": 0.8621,
+  "brier": 0.0912,
+  "brier_ci_lo": 0.0835,
+  "brier_ci_hi": 0.0994,
   "hyperparameters": { ... }
 }
 ```
@@ -461,6 +487,8 @@ Where:
 ---
 
 ## Evaluation Metrics
+
+All metrics are computed at the patient level: slide predictions are averaged per patient, and 95% confidence intervals come from patient-level bootstrap resampling (`--n_bootstrap`, default 1000).
 
 ### Metastasis Status Prediction Module
 - **AUROC**: Area under ROC curve (primary metric)
@@ -503,11 +531,13 @@ METASIGHT/
 │   ├── train_status_prediction.py
 │   ├── train_trajectory_prediction.py
 │   └── inference.py               # Standalone inference
-├── agentic_evolutionary_optimization_framework_implementation/   # Agentic evolutionary optimization framework for ensemble selection
-│   ├── driver/                    # Two-stage search / select-freeze / transfer drivers
-│   ├── metasight_ensemble/        # Ensemble search components (seeds, evaluator, selection)
-│   └── configs/
+├── agentic_evolutionary_optimization_framework_implementation/   # Two-stage agentic ensemble search
+│   ├── two_stage_impl/            # Stage 1 (OpenEvolve), Stage 2 (model-guided refinement), selection
+│   ├── selected_programs/         # Ensemble programs finalized on the TCGA development cohort
+│   └── vendor/                    # Cohort builder, reference ensembles and metrics
+├── comparison_methods/            # Comparator ensembles: stacking, random and evolutionary search
 ├── requirements.txt
+├── environment.yml                # Frozen conda environment
 ├── LICENSE
 └── README.md
 ```
@@ -518,7 +548,7 @@ METASIGHT/
 
 If you use METASIGHT in your research, please cite:
 
-Kao TW. et al., Agentic AI-Powered Pathology Evaluation Reveals Conserved Morphologic Signatures of Metastatic Progression across 23 Cancer Types (under review).
+Kao TW. et al., Agentic AI-Powered Pathology Evaluation Reveals Morphologic Signatures of Metastatic Progression across Cancers (under review).
 
 
 
