@@ -15,8 +15,14 @@ patience: 7
 seed: 42
 grad_clip_max_norm: 1.0
 
-# Loss function
-loss_type: "ordinal"  # distance-aware ordinal loss with IPCW weighting; ordinal | ce | focal | combined
+# Loss function (every loss is computed per sample and weighted by IPCW)
+loss_type: "ordinal"  # ordinal (alias: distance) | ce | focal | combined; ordinal = CE + expected ordinal distance penalty
+
+# KL regularization: VAE bottleneck before the classification head (--no_kl to disable)
+use_kl: true
+latent_dim: 32
+kl_weight: 0.001  # weight of KL within the VAE loss
+vae_weight: 1.0   # weight of the VAE loss (reconstruction + KL) in the total loss
 
 # Learning rate scheduler
 scheduler_type: "cosine"  # none | cosine | plateau

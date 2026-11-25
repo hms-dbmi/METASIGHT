@@ -106,12 +106,16 @@ def load_model(checkpoint, module, device, feature_level=None):
             use_batchnorm=use_batchnorm
         )
     else:  # trajectory
+        state = checkpoint['model_state_dict']
+        use_vae = 'vae.mu.weight' in state
         model = TrajectoryMILNet(
             feature_dim=feature_dim,
             n_classes=3,
             hidden_dim=hparams.get('hidden_dim', 128),
             dropout=hparams.get('dropout', 0.2),
-            use_batchnorm=use_batchnorm
+            use_batchnorm=use_batchnorm,
+            use_vae=use_vae,
+            latent_dim=state['vae.mu.weight'].shape[0] if use_vae else 32
         )
     
     # Load weights

@@ -15,7 +15,6 @@ import argparse
 import json
 import time
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.cuda.amp import autocast, GradScaler
@@ -27,7 +26,7 @@ from sklearn.utils.class_weight import compute_class_weight
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import TrajectoryMILNet, OrdinalDistanceLoss, get_loss_function
+from models import TrajectoryMILNet, get_loss_function
 from data import (WSIDataset, collate_fn, load_trajectory_clinical_data, cross_fit_ipcw,
                   load_feature_file, get_feature_dim, FEATURE_SUBDIR)
 from training import get_scheduler, step_scheduler
@@ -70,7 +69,19 @@ def parse_args():
     
     # Loss function
     parser.add_argument("--loss_type", type=str, default="ordinal",
-                       choices=["ordinal", "ce", "focal", "combined"])
+                       choices=["ordinal", "distance", "ce", "focal", "combined"],
+                       help="ordinal (alias: distance): cross-entropy + expected ordinal distance penalty "
+                            "(default). Every loss is computed per sample and weighted by IPCW.")
+    
+    # KL regularization (VAE bottleneck before the classification head), on by default
+    parser.add_argument("--no_kl", dest="use_kl", action="store_false",
+                       help="Disable the VAE bottleneck and its KL-regularized loss")
+    parser.add_argument("--latent_dim", type=int, default=32,
+                       help="VAE latent dimension")
+    parser.add_argument("--kl_weight", type=float, default=1e-3,
+                       help="Weight of the KL term within the VAE loss")
+    parser.add_argument("--vae_weight", type=float, default=1.0,
+                       help="Weight of the VAE loss (reconstruction + KL) in the total loss")
     
     # Scheduler
     parser.add_argument("--scheduler_type", type=str, default="cosine",
@@ -172,6 +183,38 @@ def compute_ipcw_weights(clinical_df, covariate_cols, fold_n, use_cross_fit, see
     return clinical_df
 
 
+def compute_batch_loss(model, batch, loss_fn, use_ipcw, vae_weight, device):
+    """
+    IPCW-weighted objective for one batch.
+    
+    loss = mean_i(w_i * L_task(x_i, y_i)) + vae_weight * mean_i(L_vae(x_i))
+    
+    `loss_fn` must return per-sample losses (reduction='none'); w_i are the
+    stabilized IPCW weights (1 when IPCW is not used). L_vae is zero unless the
+    model was built with use_vae=True.
+    """
+    features = batch['features'].to(device).float()
+    mask = batch.get('mask')
+    if mask is not None:
+        mask = mask.to(device)
+    labels = batch['tumor_event_label'].to(device).long()
+    
+    if use_ipcw and 'ipcw' in batch:
+        sample_weights = batch['ipcw'].to(device).float()
+    else:
+        sample_weights = torch.ones(labels.size(0), device=device)
+    
+    outputs, vae_loss = model(features, mask, return_vae_loss=True)
+    task_loss = loss_fn(outputs, labels)
+    if task_loss.dim() == 0:
+        raise ValueError("loss_fn must return per-sample losses (reduction='none') for IPCW weighting")
+    
+    loss = (task_loss * sample_weights).mean()
+    if model.use_vae:
+        loss = loss + vae_weight * vae_loss.mean()
+    return loss
+
+
 def train_one_fold(model, train_loader, val_loader, optimizer, scheduler, loss_fn,
                    use_ipcw, use_class_weight, args, device, fold_idx):
     """Train model for one fold."""
@@ -186,33 +229,10 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler, loss_f
         train_loss = 0.0
         
         for batch in train_loader:
-            features = batch['features'].to(device).float()
-            mask = batch.get('mask')
-            if mask is not None:
-                mask = mask.to(device)
-            labels = batch['tumor_event_label'].to(device).long()
-            
-            # Get IPCW weights if using
-            if use_ipcw and 'ipcw' in batch:
-                sample_weights = batch['ipcw'].to(device).float()
-            else:
-                sample_weights = torch.ones(labels.size(0), device=device)
-            
             optimizer.zero_grad()
             
             with autocast():
-                outputs = model(features, mask)
-                
-                # Compute weighted loss
-                if isinstance(loss_fn, OrdinalDistanceLoss):
-                    loss = loss_fn(outputs, labels, sample_weights)
-                elif isinstance(loss_fn, nn.CrossEntropyLoss):
-                    loss_per_sample = nn.functional.cross_entropy(
-                        outputs, labels, reduction='none'
-                    )
-                    loss = (loss_per_sample * sample_weights).mean()
-                else:
-                    loss = loss_fn(outputs, labels)
+                loss = compute_batch_loss(model, batch, loss_fn, use_ipcw, args.vae_weight, device)
             
             scaler.scale(loss).backward()
             
@@ -230,29 +250,7 @@ def train_one_fold(model, train_loader, val_loader, optimizer, scheduler, loss_f
         val_loss = 0.0
         with torch.no_grad():
             for batch in val_loader:
-                features = batch['features'].to(device).float()
-                mask = batch.get('mask')
-                if mask is not None:
-                    mask = mask.to(device)
-                labels = batch['tumor_event_label'].to(device).long()
-                
-                if use_ipcw and 'ipcw' in batch:
-                    sample_weights = batch['ipcw'].to(device).float()
-                else:
-                    sample_weights = torch.ones(labels.size(0), device=device)
-                
-                outputs = model(features, mask)
-                
-                if isinstance(loss_fn, OrdinalDistanceLoss):
-                    loss = loss_fn(outputs, labels, sample_weights)
-                elif isinstance(loss_fn, nn.CrossEntropyLoss):
-                    loss_per_sample = nn.functional.cross_entropy(
-                        outputs, labels, reduction='none'
-                    )
-                    loss = (loss_per_sample * sample_weights).mean()
-                else:
-                    loss = loss_fn(outputs, labels)
-                
+                loss = compute_batch_loss(model, batch, loss_fn, use_ipcw, args.vae_weight, device)
                 val_loss += loss.item()
         
         val_loss /= len(val_loader)
@@ -318,6 +316,9 @@ def main():
     print(f"Foundation Model: {args.foundation_model} ({args.feature_level} level, {feature_len}D)")
     print(f"Slide Type: {args.slide_type}")
     print(f"Time Horizons: {args.cutoffs} days")
+    print(f"Loss: {args.loss_type} (IPCW-weighted per sample)"
+          + (f" + {args.vae_weight} x VAE loss (KL weight {args.kl_weight}, latent {args.latent_dim})"
+             if args.use_kl else ""))
     print(f"Output: {args.output_dir}")
     
     # Process each time cutoff
@@ -442,7 +443,10 @@ def main():
                 n_classes=3,
                 hidden_dim=args.hidden_dim,
                 dropout=args.dropout,
-                use_batchnorm=use_batchnorm
+                use_batchnorm=use_batchnorm,
+                use_vae=args.use_kl,
+                latent_dim=args.latent_dim,
+                kl_weight=args.kl_weight
             ).to(device)
             
             optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -460,9 +464,9 @@ def main():
                     y=train_df['tumor_event_label']
                 )
                 class_weights = torch.tensor(class_weights, dtype=torch.float32)
-                loss_fn = get_loss_function(args.loss_type, class_weights, device)
+                loss_fn = get_loss_function(args.loss_type, class_weights, device, reduction='none')
             else:
-                loss_fn = get_loss_function(args.loss_type, None, device)
+                loss_fn = get_loss_function(args.loss_type, None, device, reduction='none')
             
             # Train
             start_time = time.time()

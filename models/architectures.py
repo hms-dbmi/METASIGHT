@@ -187,6 +187,32 @@ class MILNet(nn.Module):
         return self.out_layer(x)
 
 
+class VAEHead(nn.Module):
+    """
+    Variational bottleneck on the aggregated slide embedding.
+    
+    Encodes x into a Gaussian latent q(z|x) = N(mu, diag(exp(logvar))), samples z
+    with the reparameterization trick during training (z = mu at eval), and
+    reconstructs x from z. Returns the per-sample KL divergence to N(0, I).
+    """
+    
+    def __init__(self, in_dim, latent_dim):
+        super().__init__()
+        self.mu = nn.Linear(in_dim, latent_dim)
+        self.logvar = nn.Linear(in_dim, latent_dim)
+        self.decode = nn.Linear(latent_dim, in_dim)
+    
+    def forward(self, x):
+        mu, logvar = self.mu(x), self.logvar(x)
+        if self.training:
+            z = mu + torch.randn_like(mu) * torch.exp(0.5 * logvar)
+        else:
+            z = mu
+        recon = self.decode(z)
+        kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1)
+        return z, kl, recon
+
+
 class TrajectoryMILNet(nn.Module):
     """
     MIL network for future trajectory prediction.
@@ -202,20 +228,31 @@ class TrajectoryMILNet(nn.Module):
         hidden_dim: Hidden dimension for attention (default: 128)
         dropout: Dropout rate (default: 0.1)
         use_batchnorm: Whether to use batch normalization (default: True)
+        use_vae: Insert a VAE bottleneck with KL regularization before the
+            classification head (default: False)
+        latent_dim: VAE latent dimension (default: 32)
+        kl_weight: Weight of the KL term within the VAE loss (default: 1e-3)
     """
     
-    def __init__(self, feature_dim, n_classes=3, hidden_dim=128, dropout=0.1, use_batchnorm=True):
+    def __init__(self, feature_dim, n_classes=3, hidden_dim=128, dropout=0.1, use_batchnorm=True,
+                 use_vae=False, latent_dim=32, kl_weight=1e-3):
         super().__init__()
         self.feature_dim = feature_dim
         self.n_classes = n_classes
+        self.use_vae = use_vae
+        self.kl_weight = kl_weight
         
         # MIL encoder with attention
         self.encoder = MILAttentionEncoder(feature_dim, hidden_dim, dropout)
         
+        # Optional VAE bottleneck; the head then classifies the latent code
+        self.vae = VAEHead(feature_dim, latent_dim) if use_vae else None
+        head_in = latent_dim if use_vae else feature_dim
+        
         # Classification head
         if use_batchnorm:
             self.head = nn.Sequential(
-                nn.Linear(feature_dim, hidden_dim),
+                nn.Linear(head_in, hidden_dim),
                 nn.BatchNorm1d(hidden_dim),
                 nn.ReLU(),
                 nn.Dropout(dropout),
@@ -227,7 +264,7 @@ class TrajectoryMILNet(nn.Module):
             )
         else:
             self.head = nn.Sequential(
-                nn.Linear(feature_dim, hidden_dim),
+                nn.Linear(head_in, hidden_dim),
                 nn.ReLU(),
                 nn.Dropout(dropout),
                 nn.Linear(hidden_dim, 32),
@@ -236,15 +273,28 @@ class TrajectoryMILNet(nn.Module):
                 nn.Linear(32, n_classes)
             )
     
-    def forward(self, features, mask=None):
+    def forward(self, features, mask=None, return_vae_loss=False):
         """
         Args:
             features: [batch, n_tiles, feature_dim] - tile features from foundation model
             mask: [batch, n_tiles] (1=valid, 0=padding)
+            return_vae_loss: Also return the per-sample VAE loss
+                (reconstruction MSE + kl_weight * KL; zeros when use_vae is False)
         Returns:
             class_logits: [batch, n_classes] - logits for each outcome class
+            vae_loss: [batch] - only if return_vae_loss
         """
         # Aggregate tiles using attention
         aggregated = self.encoder(features, mask)
-        return self.head(aggregated)
+        
+        if self.vae is None:
+            logits = self.head(aggregated)
+            vae_loss = aggregated.new_zeros(aggregated.size(0))
+        else:
+            z, kl, recon = self.vae(aggregated)
+            logits = self.head(z)
+            recon_loss = ((recon - aggregated.detach()) ** 2).mean(dim=1)
+            vae_loss = recon_loss + self.kl_weight * kl
+        
+        return (logits, vae_loss) if return_vae_loss else logits
 
