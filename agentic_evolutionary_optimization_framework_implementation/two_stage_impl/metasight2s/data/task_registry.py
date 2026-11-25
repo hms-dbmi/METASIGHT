@@ -1,6 +1,6 @@
-"""The 36 ensemble-search tasks, materialised from the local (vendored) summary CSV.
+"""The 36 ensemble-search tasks, read from the vendored FM result summary CSV.
 
-task_id matches the vendored scoreboard `task` key and author-prediction dir name:
+task_id matches the `task` key of the vendored task list and the ensemble prediction folder name:
   Model_1: f"M1_{dataset}_{level}"
   Model_2: f"M2_{dataset}_{level}_cutoff{int(cutoff)}"
 

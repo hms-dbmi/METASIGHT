@@ -281,7 +281,7 @@ def _tcga_fit(model: str, level: str, cutoff: Optional[int]) -> Optional[TcgaFit
 
 def _tcga_lofo_val(fm_aligned, fm_order, model, id_col, cohort_ids,
                    cohort_template, w_global) -> pd.DataFrame:
-    """Leave-one-fold-out TCGA ENSEMBLE_Val (mirrors process_tcga L966-990)."""
+    """Leave-one-fold-out TCGA ENSEMBLE_Val (the same procedure as the vendored process_tcga)."""
     tmpl = cohort_template.drop_duplicates(id_col).set_index(id_col)
     y_by_id = tmpl["true_label"]
     fold_by_id = tmpl["fold_id"] if "fold_id" in tmpl.columns else None

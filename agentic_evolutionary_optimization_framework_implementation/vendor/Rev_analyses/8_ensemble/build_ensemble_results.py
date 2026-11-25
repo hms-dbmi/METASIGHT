@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
-build_ensemble_results.py — ensemble pipeline (ENSEMBLE / ENSEMBLE_Sim / ENSEMBLE_Val).
+build_ensemble_results.py — cohort builder, baselines and metrics for the ensemble
+search (ENSEMBLE / ENSEMBLE_Sim / ENSEMBLE_Val).
+
+The two-stage search (two_stage_impl/metasight2s/data/collab_eval.py) imports this
+module for its loaders, cohort construction, baselines and metrics; it does not run
+main(). Run as a script, main() writes the ensemble predictions and summaries under
+results_rev/ in the vendor folder.
 
 For each task (dataset, model, level, cutoff):
   1. Load FM predictions, aggregate to a canonical id (row_id=patient|slide for
      TCGA, slide_id for ExtVal M1, case_id for ExtVal M2). FM predictions are
      5-fold cross-validated out-of-fold (OOF) probabilities.
-  2. ENSEMBLE = author's predictions when available, else best FM (by TCGA mean
-     fold AUROC for that model/level/cutoff).
-  3. task_cohort = author's id set when author predictions are present (so
-     ENSEMBLE matches the scoreboard); otherwise the union of FM-covered ids.
+  2. ENSEMBLE = the METASIGHT ensemble predictions (predictions_ensemble/) when
+     available, else best FM (by TCGA mean fold AUROC for that model/level/cutoff).
+  3. task_cohort = the id set of the ensemble predictions when present (so the
+     cohort matches the task list); otherwise the union of FM-covered ids.
   4. ENSEMBLE_Sim = unweighted, coverage-aware mean of the FM probabilities on
      task_cohort (each id averaged only over the FMs that cover it).
   5. ENSEMBLE_Val = Caruana (2004) greedy ensemble-selection weights, learned by
@@ -21,10 +27,10 @@ For each task (dataset, model, level, cutoff):
          to every ExtVal cohort ("fit on TCGA, applied to ExtVal").
   6. Compute AUROC (fold-averaged pooled), Brier, AUPRC, bootstrap/across-fold
      CI for every method. (No std capping — the raw dispersion is reported.)
-  7. Write predictions and eval to results_rev/.../ALL_CANCERS_ENSEMBLE*/...
-  8. best_results_summary.csv is rewritten with the clean human-facing schema
-     (point=auroc_macro, spread=auroc_std). The full aligned/CI detail is kept
-     only in Rev_analyses/8_ensemble/ensemble_summary.csv.
+  7. (main() only) Write predictions and eval files under
+     results_rev/.../ALL_CANCERS_ENSEMBLE*/, update best_results_summary.csv
+     (point=auroc_macro, spread=auroc_std), and write the full aligned/CI detail
+     to ensemble_summary.csv next to this script.
 """
 from __future__ import annotations
 
@@ -85,9 +91,9 @@ EXTVAL_M2 = {
 }
 M2_CUTOFFS = [365, 730, 1095]
 
-# Scoreboard tasks whose per-cancer ENSEMBLE AUROCs must match the author
-# scoreboard exactly. We never apply the best-FM fallback to these, so the
-# author predictions (and the 195/195 scoreboard match) stay untouched.
+# Tasks listed in scoreboard_controlled.csv: their ENSEMBLE is the METASIGHT
+# ensemble prediction file, and the best-FM fallback is never applied to them,
+# so their per-cancer ENSEMBLE AUROCs are those of the reported ensemble.
 SCOREBOARD_PATH = PROJECT_DIR / "0_METASIGHT_ensemble_final" / "scoreboard_controlled.csv"
 
 
@@ -182,7 +188,7 @@ def _expand_fm_to_cohort(fm_df: pd.DataFrame, cohort_template: pd.DataFrame,
 
 
 def author_task_dir(dataset: str, model: str, level: str, cutoff: Optional[int]) -> Path:
-    """Author's prediction folder for a task. Folder may not exist."""
+    """METASIGHT ensemble prediction folder for a task. Folder may not exist."""
     m = "M1" if model == "Model_1" else "M2"
     if model == "Model_1":
         return AUTHOR_DIR / f"{m}_{dataset}_{level}"
@@ -842,8 +848,7 @@ def _write_predictions_extval(df: pd.DataFrame, out_dir: Path,
 def _write_eval_files(out_dir: Path, eval_all: dict, per_cancer: pd.DataFrame,
                       model: str, cutoff: Optional[int], ens_name: str,
                       dataset: str) -> None:
-    """Mirror the existing FM/ENSEMBLE eval-file naming so the visualization
-    notebook and check_scoreboard_match.py find them at the expected paths."""
+    """Write the eval files with the same naming as the FM eval files."""
     out_dir.mkdir(parents=True, exist_ok=True)
     is_tcga = (dataset == "TCGA")
     if model == "Model_1":
@@ -866,7 +871,7 @@ def _write_eval_files(out_dir: Path, eval_all: dict, per_cancer: pd.DataFrame,
 
 
 # ---------------------------------------------------------------------------
-# Aligned scratch writers (used by stats_runner)
+# Aligned per-method prediction writers
 # ---------------------------------------------------------------------------
 def _write_aligned(df: pd.DataFrame, dir_path: Path, name: str) -> None:
     dir_path.mkdir(parents=True, exist_ok=True)
@@ -907,7 +912,7 @@ def process_tcga(model: str, level: str, cutoff: Optional[int],
             author_dfs.append(d)
         author_flat = pd.concat(author_dfs, ignore_index=True)
         author_flat = _add_row_id(author_flat)
-        # author cohort: keep one row per row_id (slide-level)
+        # ensemble cohort: keep one row per row_id (slide-level)
         author_dedup = author_flat.drop_duplicates(subset=id_col).reset_index(drop=True)
         ensemble_pred = author_dedup.copy()
     else:
@@ -1337,13 +1342,10 @@ def refresh_summary(rows: List[dict]) -> None:
                     "auroc_aligned_ci_high", "brier_aligned", "n_aligned"):
             summary.loc[idxs, col] = r[col]
 
-    # 4. Write best_results_summary.csv with the CLEAN, human-facing schema only.
-    # The aligned/CI helper columns (auroc_aligned*, auroc_ci_*, n_aligned) are
-    # intentionally NOT written here — they were the source of confusion and are
-    # mostly empty for ExtVal cohorts. They live in ensemble_summary.csv instead,
-    # which the visualize notebook reads for in-memory plotting. This keeps
-    # best_results_summary.csv identical in shape to what the notebook writes:
-    # point estimate = auroc_macro, spread = auroc_std.
+    # 4. Write best_results_summary.csv with the summary columns only
+    # (point estimate = auroc_macro, spread = auroc_std). The aligned/CI columns
+    # (auroc_aligned*, auroc_ci_*, n_aligned), mostly empty for external cohorts,
+    # go to ensemble_summary.csv instead.
     CLEAN_SUMMARY_COLS = [
         "dataset", "model", "foundation_model", "level", "cutoff",
         "auroc_macro", "auroc_std", "auprc_macro", "brier_score",
@@ -1356,8 +1358,7 @@ def refresh_summary(rows: List[dict]) -> None:
     summary_clean.to_csv(SUMMARY_PATH, index=False)
     log.info("Wrote %s (clean %d-col schema)", SUMMARY_PATH, len(CLEAN_SUMMARY_COLS))
 
-    # 5. Self-contained ensemble summary — keeps the FULL detail (aligned + CI),
-    # consumed by the notebook to draw aligned-cohort comparisons.
+    # 5. Ensemble summary with the full detail (aligned + CI).
     all_rows = ens_rows + fm_rows
     if all_rows:
         pd.DataFrame(all_rows).to_csv(ENS_SUMMARY, index=False)

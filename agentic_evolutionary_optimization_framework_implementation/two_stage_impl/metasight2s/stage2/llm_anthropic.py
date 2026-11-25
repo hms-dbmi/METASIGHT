@@ -1,15 +1,12 @@
 """Stage 2 proposals from Claude, through the `anthropic` SDK (Messages API).
 
-Loaded only through llm.make_model, which refuses unless API calls are explicitly enabled. No search has
-used it yet; the connection test (2026-10-12) reached claude-haiku-5-5 through it (anthropic SDK 1.13.0).
+Loaded only through llm.make_model, which refuses unless API calls are explicitly enabled.
 
 Key: METASIGHT2S_ANTHROPIC_API_KEY when set, otherwise the SDK's own resolution (ANTHROPIC_API_KEY or an
-`ant auth login` profile). Claude Code cloud environments do not pass a variable named ANTHROPIC_API_KEY to the
-session (their settings page says it "won't be used to authenticate requests"), so there the key goes under the
-package's own name.
+`ant auth login` profile). Use the package's own name in environments where ANTHROPIC_API_KEY is reserved.
 
-Defaults: Claude Opus 5.5 (the code was tested with Claude Haiku 5.5, which `--model
-claude-haiku-5-5` selects). Thinking is adaptive and always on for both models, so no `thinking` parameter is sent;
+Default model: Claude Opus 5.5; `--model` selects another Claude model (for example claude-haiku-5-5 for a low-cost
+pipeline check). Thinking is adaptive and always on for both models, so no `thinking` parameter is sent;
 its depth is set by `effort`, given explicitly because both models default to `medium`. No temperature or other
 sampling parameter is sent (both models reject them). The system prompt is cached, and so is the task description
 as the first user block. Server-side refusal fallback is on (`fallbacks: "default"`, beta

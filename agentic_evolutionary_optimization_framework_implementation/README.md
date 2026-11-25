@@ -38,7 +38,7 @@ making.
 - API keys, for Stage 1, Stage 2 and the connection test only:
   - `OPENAI_API_KEY`: Stage 1 (OpenEvolve), and Stage 2 when `--provider openai` is chosen.
   - `METASIGHT2S_ANTHROPIC_API_KEY` (or `ANTHROPIC_API_KEY`): Stage 2 with Claude, the default. Use the first name
-    where `ANTHROPIC_API_KEY` is reserved; Claude Code cloud environments, for example, do not pass it on to sessions.
+    in environments where `ANTHROPIC_API_KEY` is reserved.
 
 ## API switch
 
@@ -86,7 +86,7 @@ tests/
 Every step that uses outcomes, Stage 1 evolution and Stage 2 fitting and selection, runs on TCGA training data only
 (`data/cohorts.py`):
 
-- **TCGA tasks** are cross-fitted over the five author folds. For held-out fold k, Stage 1 and Stage 2 run on the
+- **TCGA tasks** are cross-fitted over the five predefined patient-grouped folds. For held-out fold k, Stage 1 and Stage 2 run on the
   other four folds, rebuilt with the vendored cohort builder so the baselines, Caruana weights and per-cancer floors
   also come from those folds. The program they produce predicts fold k. The five held-out predictions together are
   the task's locked predictions.
@@ -152,8 +152,8 @@ held-out fold or the external cohort.
 
 Model: Claude Opus 5.5 by default (`config/stage2.yaml`: `effort: high`; no sampling parameters; server-side refusal
 fallback on, so a declined request is rerun on a fallback model within the same call and `calls.jsonl` records the
-model that answered). The code was tested with Claude Haiku 5.5 (`stage2 --model claude-haiku-5-5`; Haiku models
-have no refusal fallback, so it is off for them). `--provider openai` uses gpt-6-luna.
+model that answered). `stage2 --model` selects another Claude model, for example claude-haiku-5-5 for a low-cost
+pipeline check (Haiku models have no refusal fallback, so it is off for them). `--provider openai` uses gpt-6-luna.
 
 ## Budget (fixed before any run)
 
@@ -215,10 +215,6 @@ METASIGHT2S_ALLOW_API=1 .venv/bin/python -m metasight2s.pipeline check-api --run
 One short request per model: `--stage1` goes through OpenEvolve's own client with the Stage 1 settings, so it shows
 whether a Stage 1 run with that model name can call the API; `--openai` and `--anthropic` go through the Stage 2
 providers and parse the reply as Stage 2 would. Results in `runs/T1/api_check.json`.
-
-Checked on 2026-10-12: Stage 1 with gpt-6-luna, Stage 2 with gpt-6-luna and Claude Haiku 5.5, all
-passing. The default Stage 2 model, Claude Opus 5.5, uses the same provider code; `--anthropic claude-opus-5-5`
-checks it with your key.
 
 ## Selected programs
 

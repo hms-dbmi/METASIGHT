@@ -3,7 +3,7 @@
 Locked design (data/cohorts.py): a search fits and selects only on a TCGA training cohort; its program is frozen and
 applied unchanged to data the search never saw.
 
-  TCGA task      five searches, one per held-out author fold k, each on the other four folds with the task's Stage 2
+  TCGA task      five searches, one per held-out fold k, each on the other four folds with the task's Stage 2
                  budget; the program of search k predicts fold k. Together they give the task's locked predictions.
   External task  one search on the full TCGA cohort of the same model, level and cutoff, with the external task's
                  Stage 2 budget; its program, frozen, predicts the external cohort. No refitting, no recalibration.

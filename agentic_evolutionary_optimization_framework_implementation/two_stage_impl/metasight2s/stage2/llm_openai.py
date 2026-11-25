@@ -1,8 +1,7 @@
 """Stage 2 proposals from GPT, through the `openai` SDK (Chat Completions, JSON-object output).
 
-Loaded only through llm.make_model, which refuses unless API calls are explicitly enabled. No search has
-used it yet; the connection test (2026-10-12) reached gpt-6-luna through it. The client reads OPENAI_API_KEY from
-the environment.
+Loaded only through llm.make_model, which refuses unless API calls are explicitly enabled. Default model:
+gpt-6-luna. The client reads OPENAI_API_KEY from the environment.
 """
 from __future__ import annotations
 

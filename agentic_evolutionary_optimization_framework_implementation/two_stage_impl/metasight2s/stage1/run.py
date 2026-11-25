@@ -1,8 +1,7 @@
 """Run Stage 1 (OpenEvolve, LLM-guided program evolution) for one task.
 
 Calls an external LLM API on every iteration, so it refuses unless --allow-api is passed and
-METASIGHT2S_ALLOW_API=1 is set. No Stage 1 run has been made (connection test only, 2026-10-12). OpenEvolve reads
-OPENAI_API_KEY for the model named in the config (gpt-6-luna).
+METASIGHT2S_ALLOW_API=1 is set. OpenEvolve reads OPENAI_API_KEY for the model named in the config (gpt-6-luna).
 Every model's client comes from stage1/llm_compat.py, which sends gpt-6 names with reasoning-model parameters.
 
 Iterations (limits in config/stage2_budget.csv, stage2/budget.py): a run first makes

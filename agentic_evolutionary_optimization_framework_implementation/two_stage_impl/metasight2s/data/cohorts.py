@@ -4,7 +4,7 @@ Locked design: every choice that uses outcomes (Stage 1 evolution, Stage 2 fitti
 selection) is made on TCGA training data only, and the resulting program is applied unchanged to data it has not
 seen.
 
-- A TCGA task is cross-fitted over the five author folds. For held-out fold k, both stages run on the other four
+- A TCGA task is cross-fitted over the five predefined patient-grouped folds. For held-out fold k, both stages run on the other four
   folds; the program they produce predicts fold k. The five held-out predictions together form the task's locked
   TCGA predictions.
 - An external task (CPTAC, DFCI, HANCOCK, HKU, HPFS, NHS, PLCO) uses the TCGA task with the same model, level and
@@ -95,6 +95,6 @@ def build_cohort(task_id: str, hold: Optional[int] = None):
 
 
 def fold_ids(co) -> np.ndarray:
-    """Author fold of each row of a TCGA cohort, in cohort order."""
+    """Predefined fold of each row of a TCGA cohort, in cohort order."""
     return (co.fold_map.drop_duplicates(co.id_col).set_index(co.id_col)["fold_id"]
             .reindex(co.cohort_ids).values.astype(int))

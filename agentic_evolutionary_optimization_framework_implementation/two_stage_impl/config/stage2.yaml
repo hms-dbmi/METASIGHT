@@ -18,8 +18,8 @@ openai:                   # alternative provider: GPT-6 Luna
   max_retries: 8
   reasoning_effort: null
 
-anthropic:                # default: Claude Opus 5.5; code tested with Claude Haiku 5.5
-  model: claude-opus-5-5  # `stage2 --model claude-haiku-5-5` for a test run
+anthropic:                # default provider: Claude Opus 5.5
+  model: claude-opus-5-5  # `stage2 --model <name>` overrides it, e.g. claude-haiku-5-5 for a low-cost pipeline check
   max_tokens: 16000
   effort: high
   timeout: 600

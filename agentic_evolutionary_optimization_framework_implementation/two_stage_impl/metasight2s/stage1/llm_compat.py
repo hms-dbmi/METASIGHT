@@ -2,8 +2,8 @@
 
 OpenEvolve 0.4.0 (`openevolve/llm/openai.py`) decides from the model name whether to send reasoning-model parameters
 (`max_completion_tokens`, no temperature or top_p): only names starting with o1, o3, o4, gpt-5 or gpt-oss. Other names,
-such as gpt-6-luna, are sent `max_tokens` and `temperature`, which the API rejects for that model (connection test,
-2026-10-12: "Unsupported parameter: 'max_tokens' ... Use 'max_completion_tokens' instead"). For the names listed in
+such as gpt-6-luna, are sent `max_tokens` and `temperature`, which the API rejects for that model ("Unsupported
+parameter: 'max_tokens' ... Use 'max_completion_tokens' instead"). For the names listed in
 EXTRA_REASONING_PREFIXES, this client builds the request exactly as OpenEvolve's own reasoning-model branch does;
 every other name goes to OpenEvolve's client unchanged.
 
