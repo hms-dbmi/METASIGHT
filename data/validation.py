@@ -6,13 +6,16 @@ and minimum sample sizes before training.
 """
 
 import os
+import sys
 import glob
 import torch
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple, Optional
 
-from .preprocessing import FEATURE_SUBDIR, get_feature_dim, load_feature_file
+# Run as `python data/validation.py` (README) as well as imported from the package
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from data.preprocessing import FEATURE_SUBDIR, get_feature_dim, load_feature_file
 
 # Minimum sample sizes per cancer for reliable evaluation
 MIN_SAMPLES_PER_CANCER = {

@@ -9,7 +9,7 @@ features/
 └── {CANCER_TYPE}-{SLIDE_TYPE}/
     └── {FOUNDATION_MODEL}/
         └── {MAGNIFICATION}/
-            └── features/
+            └── pt_files(stain_norm)/
                 ├── {slide_id_1}.pt
                 ├── {slide_id_2}.pt
                 └── ...
@@ -18,9 +18,10 @@ features/
 ### Path Components:
 - **CANCER_TYPE**: Cancer type identifier (e.g., BRCA, LUAD, COAD)
 - **SLIDE_TYPE**: Slide type - FS (frozen section) or PM (FFPE/permanent)
-- **FOUNDATION_MODEL**: Model name (e.g., CHIEF, GIGAPATH, KEEP, MUSK)
-- **MAGNIFICATION**: Magnification level (e.g., 20X, 40X)
-- **features**: Directory containing .pt feature files
+- **FOUNDATION_MODEL**: Model name (e.g., CHIEF, GIGAPATH, KEEP, MUSK); for slide-level
+  features (`--feature_level slide`, CHIEF and GIGAPATH) the folder is `{FOUNDATION_MODEL}_WSI`
+- **MAGNIFICATION**: `20X` (the loaders read this folder name)
+- **pt_files(stain_norm)**: Directory containing .pt feature files
 
 ### Example:
 ```
@@ -28,7 +29,7 @@ features/
 └── BRCA-FS/
     └── CHIEF/
         └── 20X/
-            └── features/
+            └── pt_files(stain_norm)/
                 ├── PATIENT001-SLIDE01.pt
                 ├── PATIENT002-SLIDE01.pt
                 └── PATIENT003-SLIDE01.pt
@@ -37,6 +38,7 @@ features/
 ## File Format
 
 Each `.pt` file contains a PyTorch tensor with shape: `[n_patches, feature_dim]`
+(slide-level features: `[1, 768]` for both CHIEF and GIGAPATH)
 
 Where:
 - **n_patches**: Number of tissue patches from the whole-slide image (typically 1000-5000)

@@ -1,9 +1,8 @@
 #!/bin/bash
 # Quick test run of METASIGHT pipeline with real deidentified data
 
-# Load environment
-module load gcc/14.2.0 cuda/12.8 conda/miniforge3/24.11.3-0
-conda activate fairtune
+# Activate the environment from environment.yml (conda env create -f environment.yml)
+conda activate metasight
 
 # Navigate to repo root (this script lives in scripts/)
 cd "$(dirname "$0")/.."
@@ -16,10 +15,10 @@ echo "  - 8 LUAD DM (Distant Metastasis)"
 echo "  - 7 BRCA Stable, 7 STAD Stable"
 echo "  Status: 14 M0, 16 M1"
 echo "  Trajectory: 14 Stable, 8 LRR, 8 DM"
-echo "  Using 2-fold CV (balanced classes)"
+echo "  Using 3-fold (status) and 2-fold (trajectory) CV"
 echo "========================================="
 
-# Test 1: Status Prediction (2 epochs for quick test)
+# Test 1: Status Prediction (3 epochs for quick test)
 echo -e "\n=== Test 1: Status Prediction Module ==="
 python scripts/train_status_prediction.py \
   --foundation_model CHIEF \
@@ -37,7 +36,7 @@ python scripts/train_status_prediction.py \
   --label_file example_data/labels/metastasis_status_label.csv \
   --output_dir test_run/results_status
 
-# Test 2: Trajectory Prediction (2 epochs for quick test)
+# Test 2: Trajectory Prediction (3 epochs for quick test)
 echo -e "\n=== Test 2: Trajectory Prediction Module ==="
 python scripts/train_trajectory_prediction.py \
   --foundation_model CHIEF \

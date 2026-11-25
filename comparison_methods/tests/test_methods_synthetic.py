@@ -156,7 +156,7 @@ def test_stacking():
 def test_evaluate():
     pred = OUT / "predictions" / "patient_level"
     E.main(["--predictions", str(pred), "--reference-method", "standard_ensemble", "--out", str(OUT / "tables"),
-            "--n-boot", "200", "--min-events", "5"])
+            "--n-perm", "200", "--min-events", "5"])
     pr = pd.read_csv(OUT / "tables" / "per_task.csv")
     sa = pd.read_csv(OUT / "tables" / "summary_auroc.csv")
     assert "standard_ensemble" not in set(pr.method) and len(sa) >= 9
@@ -165,13 +165,16 @@ def test_evaluate():
     ref.mkdir()
     for t in TASKS:
         shutil.copy(pred / PW.file_name(t, "validation_weighted_ensemble"), ref / f"{t}.csv")
-    _al, pr2, _sa, _sb, _sk = E.compare([str(pred)], str(ref), n_boot=100)
+    _al, pr2, _sa, _sb, _sk = E.compare([str(pred)], str(ref), n_perm=100)
     same = pr2[pr2.method == "validation_weighted_ensemble"]
     assert len(same) and (same.d_auroc == 0).all() and (same.d_brier == 0).all()
+    assert (same.auroc_p_delong == 1).all() and (same.brier_p_permutation == 1).all()
     y = np.array([0, 0, 1, 1, 0, 1, 0, 1, 0, 1] * 2)
     p = np.linspace(0, 1, 20)
-    a, b, n = E.task_score(y, p, np.array(["A"] * 10 + ["B"] * 10))
-    assert n == 2 and np.isclose(a, np.mean([E.auroc(y[:10], p[:10]), E.auroc(y[10:], p[10:])]))
+    q = p[::-1].copy()
+    d, lo, hi, pv = E.delong_paired(y, p, q)
+    assert np.isclose(d, E.auroc(y, p) - E.auroc(y, q)) and lo <= d <= hi and 0 < pv < 1
+    assert np.isclose(E.brier(y, p), np.mean((p - y) ** 2))
     assert np.isclose(E.bh_fdr([0.01, 0.04, 0.03])[0], 0.03)
 
 
